@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import type { Prompt } from "@/lib/types";
-import { STYLE_LABELS, STYLE_INTRO, resolveDetailUrl } from "@/lib/types";
+import { STYLE_LABELS, STYLE_INTRO, PRO_CATEGORIES, resolveDetailUrl } from "@/lib/types";
 import { PlateImage } from "@/components/PlateImage";
 import { CopyButton } from "@/components/CopyButton";
 import { SaveButton } from "@/components/SaveButton";
@@ -64,7 +64,11 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
             <span className="mono rounded" style={{ background: "rgba(237,231,218,.1)", color: "var(--paper-2)", padding: "4px 9px" }}>
               {STYLE_LABELS[prompt.style]}
             </span>
-            {prompt.category && <span className="mono" style={{ color: "var(--faint)" }}>{prompt.category}</span>}
+            {prompt.category && (
+              <span className="mono" style={{ color: "var(--faint)" }}>
+                {PRO_CATEGORIES[prompt.category] ?? prompt.category}
+              </span>
+            )}
           </div>
 
           {prompt.title && (

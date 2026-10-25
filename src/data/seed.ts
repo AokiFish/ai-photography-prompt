@@ -36,7 +36,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "editorial fashion portrait of a woman in a linen suit, soft directional window light, shallow depth of field, muted beige backdrop, minimal makeup, calm expression, shot on 85mm f/1.8, kodak portra 400 tones, refined and quiet",
     negativePrompt: "harsh flash, oversaturated, cluttered background",
-    category: "时尚人像",
+    category: "fashion",
     style: "portrait",
     model: "Midjourney",
     imageUrl: null,
@@ -51,7 +51,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "cinematic street photograph at golden hour, a cyclist silhouetted against warm low sun, long shadows on cobblestone, lens flare, teal-and-amber grade, anamorphic, 35mm, film grain, contemplative mood",
     negativePrompt: "flat light, high key, cartoonish",
-    category: "街拍",
+    category: "lifestyle",
     style: "cinematic",
     model: "Midjourney",
     imageUrl: null,
@@ -66,7 +66,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "minimalist still life, a single matte ceramic vessel on a sand-colored plinth, softbox light from upper left, one elongated shadow, generous negative space, warm neutral palette, precise symmetry, gallery object photography",
     negativePrompt: "busy composition, bright colors, noise",
-    category: "静物",
+    category: "product",
     style: "minimalist",
     model: "Midjourney",
     imageUrl: null,
@@ -81,7 +81,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "film noir alley after rain, single figure under a streetlamp, wet pavement reflecting amber light, heavy shadows, high contrast black and white, fog at the end of the lane, 50mm, grain, brooding",
     negativePrompt: "color, daytime, wide angle distortion",
-    category: "夜景",
+    category: "cinematic",
     style: "noir",
     model: "Midjourney",
     imageUrl: null,
@@ -96,7 +96,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "high-contrast black and white portrait, dramatic chiaroscuro, half face lit by a single hard light, deep shadow side, textured skin, large format look, classical, expressive",
     negativePrompt: "fill light, color, soft focus",
-    category: "人像",
+    category: "portrait",
     style: "monochrome",
     model: "Midjourney",
     imageUrl: null,
@@ -111,7 +111,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "candid 35mm documentary photograph, an old man reading a newspaper at a café, faded kodak gold tones, light leak, authentic imperfect grain, natural soft light, nostalgic, unposed",
     negativePrompt: "studio light, hdr, sharpened",
-    category: "纪实",
+    category: "lifestyle",
     style: "film",
     model: "Midjourney",
     imageUrl: null,
@@ -126,7 +126,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "extreme macro of a dew drop on a fern frond, refracting morning light, ultra sharp, soft bokeh background, vivid greens, shallow depth of field, crisp and luminous, botanical fine art",
     negativePrompt: "blurry, desaturated, artificial",
-    category: "自然",
+    category: "landscape",
     style: "macro",
     model: "Midjourney",
     imageUrl: null,
@@ -141,7 +141,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "serene landscape, layered misty mountains at dawn, cool muted palette, faint sun behind clouds, minimal foreground, large format, tranquil, fine art print",
     negativePrompt: "saturation, harsh contrast, tourists",
-    category: "风光",
+    category: "landscape",
     style: "landscape",
     model: "Midjourney",
     imageUrl: null,
@@ -156,7 +156,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "full-length fashion photograph, model in flowing silk dress, hard rim light, dark studio, strong silhouette, couture, vogue editorial, 85mm, clean retouch",
     negativePrompt: "busy bg, low light, motion blur",
-    category: "时尚",
+    category: "fashion",
     style: "portrait",
     model: "Midjourney",
     imageUrl: null,
@@ -173,7 +173,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "cyberpunk noir city night, neon signs cyan and magenta reflecting on wet alley pavement, cinematic haze, rain droplets, high contrast, futuristic gritty, atmospheric depth",
     negativePrompt: "daylight, pastel, low detail",
-    category: "夜景",
+    category: "cinematic",
     style: "noir",
     model: "SDXL",
     imageUrl: null,
@@ -190,7 +190,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "cinematic portrait of a man in a trench coat, smoke drifting, shallow depth of field, teal-orange grade, dramatic side light, 35mm film grain, moody",
     negativePrompt: "cartoon, 3d, oversharpen",
-    category: "人像",
+    category: "portrait",
     style: "cinematic",
     model: "SD 1.5",
     imageUrl: null,
@@ -207,7 +207,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "minimalist architecture photography, concrete staircase with strong diagonal shadow, monochrome, negative space, precise geometry, soft overcast light",
     negativePrompt: "color, clutter, people",
-    category: "建筑",
+    category: "architectural",
     style: "minimalist",
     model: "SDXL",
     imageUrl: null,
@@ -224,7 +224,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "vintage 35mm film photo, two friends on a road trip at dusk, super 8 grain, faded tones, warm light leak, nostalgic, authentic",
     negativePrompt: "digital, clean, hdr",
-    category: "纪实",
+    category: "lifestyle",
     style: "film",
     model: "SD 1.5",
     imageUrl: null,
@@ -241,7 +241,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "black and white photograph of a dancer mid-leap, motion blurred fabric, high key, elegant, studio, fine art",
     negativePrompt: "color, busy, low contrast",
-    category: "人像",
+    category: "portrait",
     style: "monochrome",
     model: "SDXL",
     imageUrl: null,
@@ -258,7 +258,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "macro shot of a dragonfly wing, iridescent detail, ultra sharp, dark background, bokeh, scientific beauty, luminous",
     negativePrompt: "blurry, flat, artificial color",
-    category: "自然",
+    category: "landscape",
     style: "macro",
     model: "SDXL",
     imageUrl: null,
@@ -275,7 +275,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "fine art landscape, wind-carved desert dunes at blue hour, long shadows, minimal, cool warm contrast, large format, peaceful",
     negativePrompt: "people, clutter, oversaturation",
-    category: "风光",
+    category: "landscape",
     style: "landscape",
     model: "SDXL",
     imageUrl: null,
@@ -292,7 +292,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "editorial fashion, woman in a red dress against brutalist concrete, hard sunlight, bold shadow, confident pose, vogue, 85mm",
     negativePrompt: "soft, low contrast, cluttered",
-    category: "时尚",
+    category: "fashion",
     style: "portrait",
     model: "SDXL",
     imageUrl: null,
@@ -309,7 +309,7 @@ const RAW_SEED: Prompt[] = [
     promptText:
       "film noir interior, a detective in a smoky bar, venetian blind shadows across his face, low key light, amber whiskey glass, high contrast, 50mm grain",
     negativePrompt: "bright, color, clean",
-    category: "夜景",
+    category: "cinematic",
     style: "noir",
     model: "SD 1.5",
     imageUrl: null,

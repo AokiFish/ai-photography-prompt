@@ -24,8 +24,10 @@ function pick(re, html, group = 1) {
   return m ? m[group].trim() : "";
 }
 
-// 解析 gallery 页：优先 <a href="/prompt/..."> 卡片；否则从 __NEXT_DATA__ 取对象。
-export function parseGalleryCards(html) {
+// 解析列表页：优先 <a href="/prompt/..."> 卡片；否则从 __NEXT_DATA__ 取对象。
+// forceCategory：调用方传入页面级权威分类（/category/<key> 采集时用），
+// 传入后不再从卡片全文猜分类——官方页面标注优先，杜绝误判。
+export function parseGalleryCards(html, forceCategory = null) {
   const cards = [];
   const seen = new Set();
 
@@ -44,7 +46,7 @@ export function parseGalleryCards(html) {
     cards.push({
       slug,
       sourceUrl: href.startsWith("http") ? href : BASE + href,
-      siteCategory: catM ? catM[1].toLowerCase() : null,
+      siteCategory: forceCategory ?? (catM ? catM[1].toLowerCase() : null),
       galleryImage: imgM ? imgM[1] : null,
     });
   }
@@ -185,62 +187,94 @@ function extractHomepage(html) {
 }
 
 /**
+ * 采集 PRMPT 全量提示词。
+ *
+ * 主路径（官方分类页）：https://prmpt.it.com/category/<key> × 官方 12 类，
+ * 每类分页抓到底。分类直接用页面 key——站点怎么标我们就怎么存，零猜测。
+ * 兜底路径：分类页整体不可用时退回 /gallery 分页；再不行退回首页
+ * __NEXT_DATA__（保证不退化到 0 条，但该路径产出的记录无官方分类，
+ * 由 normalizeItem 兜底，且 source_url 为站点根、前端会隐藏「打开完整网页」）。
+ *
  * @param {object} opts
- * @param {number} opts.limit    最多采集条数（默认 60）
+ * @param {number} opts.limit    最多采集条数（默认 0 = 全部）
  * @param {number} opts.delay    请求间隔(ms)
- * @param {number} opts.maxPages 最多翻页数（默认 6）
+ * @param {number} opts.maxPages 单个列表最多翻页数（默认 30）
  */
 export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30 } = {}) {
   const raw = [];
   const seen = new Set();
 
-  // 策略 A：/gallery 分页（limit<=0 表示抓全部，直到末页或 maxPages）
-  let galleryTotal = 0;
+  const grab = async (c) => {
+    if (limit > 0 && raw.length >= limit) return;
+    if (seen.has(c.slug)) return;
+    seen.add(c.slug);
+    try {
+      const dhtml = await fetchText(c.sourceUrl, { delay });
+      const d = extractDetail(dhtml);
+      raw.push({
+        id: `prmpt:${c.slug}`,
+        source: "prmpt",
+        sourceUrl: c.sourceUrl,
+        title: d.title,
+        promptText: d.promptText,
+        negativePrompt: null,
+        // 列表页官方标注优先；详情页明确标注（/category/ 链接）仅在同页更权威时采用
+        category: c.siteCategory || d.category,
+        style: null,
+        model: null,
+        imageUrl: d.imageUrl || c.galleryImage,
+        tags: [],
+        collectedAt: Date.now(),
+      });
+    } catch (e) {
+      console.warn(`[prmpt] 跳过 ${c.sourceUrl}: ${e.message}`);
+    }
+  };
+
+  // 策略 A（主路径）：官方 12 个分类页分页全采
+  let catTotal = 0;
   try {
-    let page = 0;
-    while (page < maxPages && (limit <= 0 || raw.length < limit)) {
-      const url = page === 0 ? `${BASE}/gallery` : `${BASE}/gallery?page=${page + 1}`;
-      const html = await fetchText(url, { delay: page === 0 ? 800 : delay });
-      const cards = parseGalleryCards(html);
-      console.log(`[prmpt] gallery 第 ${page + 1} 页解析到 ${cards.length} 卡片`);
-      galleryTotal += cards.length;
-      if (cards.length === 0) break;
-
-      for (const c of cards) {
-        if (raw.length >= limit) break;
-        if (seen.has(c.slug)) continue;
-        seen.add(c.slug);
-        try {
-          const dhtml = await fetchText(c.sourceUrl, { delay });
-          const d = extractDetail(dhtml);
-          raw.push({
-            id: `prmpt:${c.slug}`,
-            source: "prmpt",
-            sourceUrl: c.sourceUrl,
-            title: d.title,
-            promptText: d.promptText,
-            negativePrompt: null,
-            category: d.category || c.siteCategory, // 详情页明确分类优先，否则卡片标注
-            style: null,
-            model: null,
-            imageUrl: d.imageUrl || c.galleryImage,
-            tags: [],
-            collectedAt: Date.now(),
-          });
-        } catch (e) {
-          console.warn(`[prmpt] 跳过 ${c.sourceUrl}: ${e.message}`);
-        }
+    for (const cat of KNOWN_CATEGORIES) {
+      let page = 0;
+      while (page < maxPages && (limit <= 0 || raw.length < limit)) {
+        const url =
+          page === 0 ? `${BASE}/category/${cat}` : `${BASE}/category/${cat}?page=${page + 1}`;
+        const html = await fetchText(url, { delay: page === 0 ? 800 : delay });
+        const cards = parseGalleryCards(html, cat);
+        console.log(`[prmpt] /category/${cat} 第 ${page + 1} 页解析到 ${cards.length} 卡片`);
+        catTotal += cards.length;
+        if (cards.length === 0) break;
+        for (const c of cards) await grab(c);
+        page++;
+        // 无显式分页链接且本页卡片很少，视为已到末页
+        if (!/page=\d+/i.test(html) && cards.length < 12) break;
       }
-
-      page++;
-      // 无显式分页链接且本页卡片很少，视为已到末页
-      if (!/\/gallery\?page=\d+/i.test(html) && cards.length < 12) break;
     }
   } catch (e) {
-    console.warn(`[prmpt] gallery 采集异常: ${e.message}`);
+    console.warn(`[prmpt] 分类页采集异常: ${e.message}`);
   }
 
-  // 策略 B：gallery 解析为 0，回退首页 __NEXT_DATA__（保证不退化到 0）
+  // 策略 B（兜底）：分类页整体 0 条时才回退 /gallery 分页
+  if (raw.length === 0) {
+    console.log(`[prmpt] 分类页解析为 0，回退 /gallery 分页`);
+    try {
+      let page = 0;
+      while (page < maxPages && (limit <= 0 || raw.length < limit)) {
+        const url = page === 0 ? `${BASE}/gallery` : `${BASE}/gallery?page=${page + 1}`;
+        const html = await fetchText(url, { delay: page === 0 ? 800 : delay });
+        const cards = parseGalleryCards(html);
+        console.log(`[prmpt] gallery 第 ${page + 1} 页解析到 ${cards.length} 卡片`);
+        if (cards.length === 0) break;
+        for (const c of cards) await grab(c);
+        page++;
+        if (!/\/gallery\?page=\d+/i.test(html) && cards.length < 12) break;
+      }
+    } catch (e) {
+      console.warn(`[prmpt] gallery 采集异常: ${e.message}`);
+    }
+  }
+
+  // 策略 C（兜底）：仍为 0，回退首页 __NEXT_DATA__（保证不退化到 0）
   if (raw.length === 0) {
     console.log(`[prmpt] gallery 解析为 0，回退首页 __NEXT_DATA__ 提取`);
     try {
@@ -258,6 +292,6 @@ export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30 } = 
     }
   }
 
-  console.log(`[prmpt] 合计 ${raw.length} 条（gallery 卡片约 ${galleryTotal}）`);
+  console.log(`[prmpt] 合计 ${raw.length} 条（分类页卡片约 ${catTotal}）`);
   return raw;
 }

@@ -20,24 +20,26 @@ interface PromptRow {
   collected_at: number;
 }
 
-// 历史遗留：旧 lexica 采集器曾把中文分类（人像/时尚…）直接入 DB，
-// 与现筛选行的英文键不一致。读取时反向归一，清理脏数据，无需重爬。
+// 历史遗留：旧采集器曾把中文分类直接入 DB，与现筛选行的英文键不一致。
+// 读取时反向归一为官方 12 分类键，清理脏数据，无需重爬。
 const CN_CATEGORY_TO_KEY: Record<string, string> = {
-  人像: "fashion",
+  人像: "portrait",
   建筑: "architectural",
   纪实: "lifestyle",
   自然: "landscape",
-  夜景: "noir",
+  夜景: "cinematic",
   时尚: "fashion",
   风光: "landscape",
   艺术: "artistic",
   汽车: "automotive",
   内衣: "lingerie",
   浪漫: "romantic",
+  浪漫主义: "romantic",
   生活方式: "lifestyle",
   产品: "product",
-  电影: "artistic",
-  肖像: "fashion",
+  电影: "cinematic",
+  肖像: "portrait",
+  美妆: "beauty",
 };
 
 function normalizeReadCategory(raw: string | null): string | null {

@@ -79,20 +79,22 @@ export const CORE_STYLES: StyleKey[] = [
   "noir",
 ];
 
-// 专业分类（英语键 → 中文标签）—— 图集「专业」筛选行。数据为采集后归类所用。
-// 与「核心风格」(CORE_STYLES) 严格不重叠：不出现 cinematic（电影感归核心），
-// 也不出现 portrait（用户确认无「人像」分类）。
+// 专业分类（英语键 → 中文标签）—— 图集「专业」筛选行。
+// 与 prmpt.it.com 官方 Browse by category 完全一致（12 类，含 cinematic/portrait），
+// 采集时按 https://prmpt.it.com/category/<key> 分页抓取，分类零猜测。
 export const PRO_CATEGORIES: Record<string, string> = {
   architectural: "建筑",
   artistic: "艺术",
   automotive: "汽车",
-  beauty: "美妆",
+  beauty: "美",
+  cinematic: "电影",
   fashion: "时尚",
   landscape: "地貌",
   lifestyle: "生活方式",
   lingerie: "内衣",
+  portrait: "肖像",
   product: "产品",
-  romantic: "浪漫",
+  romantic: "浪漫主义",
 };
 
 const SOURCE_ROOTS: Record<string, string> = {

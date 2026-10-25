@@ -80,42 +80,42 @@ export function inferStyle(text = "") {
 }
 
 // ── 采集 → 入库 之间的「整理 / 转换映射」层 ────────────────────────────
-// prmpt.it.com/gallery 每张卡片首行即分类标签，且多为英文、与 PRO_CATEGORIES
-// 键同名。此处集中把站点原始标签归一为我们的专业分类键，杜绝各自猜测乱分。
+// prmpt.it.com 有官方 12 分类（Browse by category + /category/<key> 页）。
+// 采集主路径即按官方分类页抓取，category 100% 用官方标注、零猜测；
+// 本层只做：同义词归一、历史中文脏数据兜底、style 派生。
 
-// 专业分类键集合（与 src/lib/types.ts 的 PRO_CATEGORIES 键保持一致）。
-// 不含 portrait（用户确认无「人像」分类）、不含 cinematic（电影感归核心风格，避免重复）。
+// 专业分类键集合 = prmpt.it.com 官方 12 类（与 src/lib/types.ts PRO_CATEGORIES 一致）。
 export const KNOWN_CATEGORIES = new Set([
-  "architectural", "artistic", "automotive", "beauty",
-  "fashion", "landscape", "lifestyle", "lingerie", "product", "romantic",
+  "architectural", "artistic", "automotive", "beauty", "cinematic",
+  "fashion", "landscape", "lifestyle", "lingerie", "portrait", "product", "romantic",
 ]);
 
-// 同义词 → 专业分类键
+// 同义词 → 官方分类键（站点卡片上可能出现的变体标签）
 const CATEGORY_ALIASES = {
   editorial: "fashion", streetwear: "fashion", street: "lifestyle",
   nude: "lingerie", wedding: "romantic", travel: "lifestyle",
   car: "automotive", building: "architectural", "fine-art": "artistic",
   "fine art": "artistic",
-  // 用户确认：站点无「人像」分类，源站标 portrait 归入时尚题材；
-  // 「电影感」属核心风格维度，电影感题材归入艺术，专业分类不再单列。
-  portrait: "fashion", cinematic: "artistic",
 };
 
-// 中文标签 → 专业分类键（防御：采集器本应只产出英文标签，此处兜底历史/异常中文）
+// 中文标签 → 官方分类键（防御：采集器本应只产出英文标签，此处兜底历史/异常中文）
 const CATEGORY_CN = {
-  人像: "fashion", 建筑: "architectural", 纪实: "lifestyle", 自然: "landscape",
-  夜景: "noir", 时尚: "fashion", 风光: "landscape", 艺术: "artistic",
-  汽车: "automotive", 内衣: "lingerie", 浪漫: "romantic", 生活方式: "lifestyle",
-  产品: "product", 电影: "artistic", 肖像: "fashion",
+  建筑: "architectural", 艺术: "artistic", 汽车: "automotive", 美: "beauty",
+  电影: "cinematic", 时尚: "fashion", 地貌: "landscape", 生活方式: "lifestyle",
+  内衣: "lingerie", 肖像: "portrait", 产品: "product", 浪漫主义: "romantic",
+  // 历史脏数据兼容（早期错误映射写入的中文）
+  人像: "portrait", 风光: "landscape", 浪漫: "romantic", 纪实: "lifestyle",
+  自然: "landscape", 夜景: "cinematic",
 };
 
-// 专业题材 → 核心摄影语言（style 只能取 CORE_STYLES 的 6 个值 + other，
-// 绝不取 portrait/landscape，杜绝「核心/专业」重复与不存在的「人像」分类）。
+// 官方分类 → 核心摄影语言（style）。仅作 promptText 无关键词时的兜底；
+// 主路径是 inferStyle(promptText)——按图片本身的摄影语言判定，
+// 避免「时尚题材硬映射成人像/电影感」这类自作主张。
 export const CATEGORY_TO_STYLE = {
-  fashion: "cinematic", beauty: "cinematic", lingerie: "noir",
-  lifestyle: "film", landscape: "minimalist", artistic: "monochrome",
-  romantic: "cinematic", architectural: "minimalist", automotive: "cinematic",
-  product: "minimalist",
+  architectural: "minimalist", artistic: "cinematic", automotive: "cinematic",
+  beauty: "portrait", cinematic: "cinematic", fashion: "cinematic",
+  landscape: "landscape", lifestyle: "film", lingerie: "noir",
+  portrait: "portrait", product: "minimalist", romantic: "cinematic",
 };
 
 /** 站点原始分类标签 → 我们的专业分类键（英文）。未知则原样保留（并在 types.ts 补 PRO_CATEGORIES）。*/
@@ -128,13 +128,18 @@ export function normalizeCategory(raw) {
   return k; // 未知分类保留，交由 types.ts 增补筛选行
 }
 
-/** 中间映射层：把采集到的原始条目规范为入库字段（category 键 + style 键）。*/
+/**
+ * 中间映射层：把采集到的原始条目规范为入库字段。
+ * - category：100% 官方标注（按 /category/<key> 采集时即页面 key），不猜测；
+ * - style（核心摄影语言）：**从提示词内容推断优先**（inferStyle），
+ *   分类映射仅作无关键词时的兜底。杜绝「时尚题材硬是人像/电影感」。
+ */
 export function normalizeItem(raw) {
   const category = normalizeCategory(raw.category);
   const style =
-    (category && CATEGORY_TO_STYLE[category]) ||
     raw.style ||
     inferStyle(raw.promptText || "") ||
+    (category && CATEGORY_TO_STYLE[category]) ||
     "other";
   return { ...raw, category, style };
 }
