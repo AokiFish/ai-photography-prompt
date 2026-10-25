@@ -1,6 +1,6 @@
 import { getDB } from "@/lib/db";
 import { SEED_PROMPTS } from "@/data/seed";
-import { resolveDetailUrl } from "@/lib/types";
+import { resolveDetailUrl, promptSlug } from "@/lib/types";
 import type { Prompt, Source, StyleKey } from "@/lib/types";
 
 interface PromptRow {
@@ -139,6 +139,24 @@ export async function getPrompt(id: string): Promise<Prompt | null> {
     if (row) return rowToPrompt(row);
   }
   return SEED_PROMPTS.find((p) => p.id === id) ?? null;
+}
+
+/**
+ * 按「站内详情页 slug」取单条提示词（/prompt/<slug> 路由用）。
+ * slug 由 promptSlug() 从 sourceUrl 或 id 派生，与卡片「打开完整网页」同源，
+ * 保证图集点进去和路由直达是同一张图。找不到返回 null（详情页应 404）。
+ */
+export async function getPromptBySlug(slug: string): Promise<Prompt | null> {
+  const db = getDB();
+  if (db) {
+    const stmt = db.prepare("SELECT * FROM prompts");
+    const { results } = await stmt.all<PromptRow>();
+    for (const r of results) {
+      if (promptSlug(rowToPrompt(r)) === slug) return rowToPrompt(r);
+    }
+    return null;
+  }
+  return SEED_PROMPTS.find((p) => promptSlug(p) === slug) ?? null;
 }
 
 export interface Facets {

@@ -127,6 +127,29 @@ export function resolveDetailUrl(
   return candidate && DETAIL_URL_RE.test(candidate) ? candidate : null;
 }
 
+/**
+ * 站内详情页 slug 派生：所有带可解析 slug 的记录都能生成 /prompt/<slug>。
+ * 优先用 sourceUrl 的 /prompt/<slug> 路径（最权威），否则用 id 的 <source>:<slug>。
+ * 站点根 / 首页兜底(home:) / 含非法字符 → 返回 null（不给站内死链）。
+ */
+export function promptSlug(
+  p: Pick<Prompt, "id" | "sourceUrl">
+): string | null {
+  const m = p.sourceUrl && /\/prompt\/([^/?#]+)/.exec(p.sourceUrl);
+  if (m) return decodeURIComponent(m[1]);
+  const slug = /^[a-z]+:(.+)$/.exec(p.id)?.[1];
+  if (!slug || slug.startsWith("home:") || /[/\s]/.test(slug)) return null;
+  return slug;
+}
+
+/** 站内详情页 URL：每张图在自己站上的独立页面（图集「打开完整网页」的目标）。 */
+export function resolveOwnSiteUrl(
+  p: Pick<Prompt, "id" | "sourceUrl">
+): string | null {
+  const slug = promptSlug(p);
+  return slug ? `/prompt/${slug}` : null;
+}
+
 // 弹窗里的「类型介绍」——每种摄影语言的简要说明（编辑式口吻）。
 export const STYLE_INTRO: Record<StyleKey, string> = {
   cinematic:

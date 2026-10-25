@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import type { Prompt } from "@/lib/types";
-import { STYLE_LABELS, STYLE_INTRO, PRO_CATEGORIES, resolveDetailUrl } from "@/lib/types";
+import { STYLE_LABELS, STYLE_INTRO, PRO_CATEGORIES, resolveDetailUrl, resolveOwnSiteUrl, SOURCE_LABELS } from "@/lib/types";
 import { PlateImage } from "@/components/PlateImage";
 import { CopyButton } from "@/components/CopyButton";
 import { SaveButton } from "@/components/SaveButton";
@@ -21,9 +22,10 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
     };
   }, [onClose]);
 
-  // 真实内页链接：拿不到（脏数据/兜底记录没有详情页）时隐藏按钮，
-  // 绝不退化成源站首页——那会误导用户。
-  const detailUrl = resolveDetailUrl(prompt);
+  // 主按钮：跳站内详情页 /prompt/<slug>（每张图在自己站上的独立页面）。
+  const ownUrl = resolveOwnSiteUrl(prompt);
+  // 次级链接：源站内页（过白名单；脏数据/兜底记录为 null → 不显示，绝不跳源站首页）。
+  const sourceUrl = resolveDetailUrl(prompt);
   // 徽标只显示**专业分类**（官方 12 类）；确实没有分类数据时才回退摄影风格。
   const catLabel = PRO_CATEGORIES[prompt.category ?? ""] ?? null;
 
@@ -127,15 +129,24 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
 
           <div className="mt-auto flex flex-wrap items-center gap-3 pt-6">
             <SaveButton id={prompt.id} />
-            {detailUrl && (
-              <a
-                href={detailUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+            {ownUrl && (
+              <Link
+                href={ownUrl}
                 className="mono rounded"
                 style={{ background: "var(--accent)", color: "#141414", border: "1px solid var(--accent)", padding: "9px 16px", fontSize: 11.5 }}
               >
                 打开完整网页 ↗
+              </Link>
+            )}
+            {sourceUrl && (
+              <a
+                href={sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mono rounded"
+                style={{ border: "1px solid var(--line-strong)", color: "var(--muted)", padding: "9px 16px", fontSize: 11.5 }}
+              >
+                在 {SOURCE_LABELS[prompt.source]} 查看源站 ↗
               </a>
             )}
           </div>
