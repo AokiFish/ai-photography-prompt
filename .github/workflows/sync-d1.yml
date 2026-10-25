@@ -1,0 +1,38 @@
+name: Sync Dataset → Cloudflare D1
+
+# 仓库主分支推送（含每日采集提交、或你手动改代码后提交数据集）时，
+# 自动把 data/prompts.sql 同步进 Cloudflare D1。这就是「部署 → 自动同步 D1」。
+# 仅当数据集文件变化时才跑，避免无谓同步。
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/prompts.sql"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Sync data/prompts.sql → D1 (--remote)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN 未配置，跳过写库"
+            exit 0
+          fi
+          # 去除 Secrets 粘贴时常带的换行/空格，避免 Authorization 头格式非法
+          CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
+          npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --file=data/prompts.sql

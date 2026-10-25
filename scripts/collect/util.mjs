@@ -172,6 +172,21 @@ export function promptsToSql(rows) {
   return lines.join("\n");
 }
 
+/**
+ * 完整数据集 SQL（INSERT OR REPLACE，不含 DELETE）。
+ * 用于把仓库内的数据集同步进 Cloudflare D1：主键冲突时覆盖、不主动删除，
+ * 避免误清 D1 中已有的数据（部署同步是「刷新/追加」，不是「整表重建」）。
+ */
+export function datasetSql(rows, metas = []) {
+  return (
+    `-- 数据集快照 @ ${new Date().toISOString()}\n` +
+    promptsToSql(rows) +
+    "\n" +
+    sourcesMetaToSql(metas) +
+    "\n"
+  );
+}
+
 export function sourcesMetaToSql(metas) {
   const cols = ["key", "label", "last_run", "status", "count"];
   return metas

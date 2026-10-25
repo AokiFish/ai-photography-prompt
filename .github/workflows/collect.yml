@@ -1,6 +1,7 @@
 name: Collect Prompts (Daily)
 
-# 每天 08:00（北京时间 = 00:00 UTC）采集 PRMPT 与 Lexica，写入 Cloudflare D1。
+# 每天 08:00（北京时间 = 00:00 UTC）采集 PRMPT，更新仓库数据集 data/prompts.sql/.json 并推回 main。
+# 推送后由 sync-d1.yml 自动把数据集同步进 Cloudflare D1。
 # 也可在 Actions 页面手动 `Run workflow` 触发。
 on:
   schedule:
@@ -8,7 +9,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write # 需要把数据集提交回仓库
 
 concurrency:
   group: collect-d1
@@ -17,42 +18,35 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      # 0) 安装 Playwright + Chromium（lexica 需无头浏览器过 Cloudflare 质询）
-      #    --no-save 不污染仓库 package.json；仅 lexica 采集用到，本地无则自动回退。
-      - name: Install Playwright (Lexica 过 Cloudflare 用)
-        run: |
-          npm install --no-save playwright
-          npx playwright install --with-deps chromium
-
-      # 1) 抓取两个源，生成 D1 的 INSERT SQL（落盘 .collect/collect.sql）
-      #    采集器内置请求延迟，遵守目标站点的安全抓取间隔。
-      - name: Scrape sources → SQL
+      # 1) 抓取来源，更新仓库数据集文件（data/prompts.sql + .json）
+      #    LEXICA_PER_QUERY=0：action 跑在数据中心 IP，lexica 被 Cloudflare 拦，跳过以省时间；
+      #    本地（住宅 IP 能过 Cloudflare）跑 node scripts/collect.mjs 才会采 lexica。
+      - name: Scrape sources → dataset files
         env:
-          WRITE_D1: "false" # 本步只生成 SQL，写入交给下一步
           FETCH_DELAY: "1500" # 请求间隔(ms)
           PRMPT_LIMIT: "12" # PRMPT 单轮最多条数
-          LEXICA_PER_QUERY: "8" # Lexica 每个检索词最多条数
+          LEXICA_PER_QUERY: "0" # action 内跳过 lexica（被 Cloudflare 拦）
         run: node scripts/collect.mjs
 
-      # 2) 写入远程 D1。需要仓库 Secrets：CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID
-      #    直接用数据库名 ai-photography-prompt（非 wrangler.toml 绑定），避免 wrangler.toml 暴露 UUID。
-      - name: Write to Cloudflare D1
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # 2) 提交数据集回仓库（触发 sync-d1.yml 同步 D1）
+      - name: Commit dataset
         run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "CLOUDFLARE_API_TOKEN 未配置，跳过写库"
-            exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/prompts.sql data/prompts.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: 每日采集更新 $(date -u +%F)"
+            git push origin HEAD:main
+          else
+            echo "无新数据，跳过提交"
           fi
-          # 去除 Secrets 粘贴时常带的换行/空格，避免 Authorization 头格式非法
-          CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
-          npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --file=$GITHUB_WORKSPACE/.collect/collect.sql

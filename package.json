@@ -13,7 +13,8 @@
     "cf:dev": "npx wrangler pages dev .vercel/output/static --d1 DB=./.wrangler/state/v3/d1/DB.sqlite",
     "db:migrate:local": "wrangler d1 execute ai-photography-prompt --local --file=./migrations/0001_init.sql",
     "db:migrate:remote": "wrangler d1 execute ai-photography-prompt --remote --file=./migrations/0001_init.sql",
-    "collect": "node scripts/collect.mjs"
+    "collect": "node scripts/collect.mjs",
+    "db:sync": "wrangler d1 execute ai-photography-prompt --remote --file=./data/prompts.sql"
   },
   "dependencies": {
     "next": "15.5.2",
