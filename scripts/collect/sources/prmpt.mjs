@@ -196,13 +196,32 @@ function extractHomepage(html) {
  * 由 normalizeItem 兜底，且 source_url 为站点根、前端会隐藏「打开完整网页」）。
  *
  * @param {object} opts
- * @param {number} opts.limit    最多采集条数（默认 0 = 全部）
- * @param {number} opts.delay    请求间隔(ms)
- * @param {number} opts.maxPages 单个列表最多翻页数（默认 30）
+ * @param {number} opts.limit       最多采集条数（默认 0 = 全部）
+ * @param {number} opts.delay       请求间隔(ms)
+ * @param {number} opts.maxPages    单个列表最多翻页数（默认 30）
+ * @param {string[]|null} opts.categories 只抓这些分类（默认 null = 官方全部 12 类）。
+ *                                  用于「一个分类一个分类地抓」，便于逐类排查。
  */
-export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30 } = {}) {
+export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30, categories = null } = {}) {
   const raw = [];
   const seen = new Set();
+
+  // 分类清单：传入则只抓指定分类（无效名警告并忽略）；未传抓官方全部 12 类
+  const allCats = [...KNOWN_CATEGORIES];
+  let cats = allCats;
+  if (categories && categories.length) {
+    cats = categories
+      .map((c) => String(c).trim().toLowerCase())
+      .filter((c) => allCats.includes(c));
+    if (cats.length === 0) {
+      console.warn(
+        `[prmpt] ⚠ 指定的分类无有效值（有效分类: ${allCats.join(", ")}），本次回退为抓全部分类`
+      );
+      cats = allCats;
+    } else {
+      console.log(`[prmpt] 仅抓指定分类: ${cats.join(", ")}`);
+    }
+  }
 
   const grab = async (c) => {
     if (limit > 0 && raw.length >= limit) return;
@@ -231,10 +250,10 @@ export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30 } = 
     }
   };
 
-  // 策略 A（主路径）：官方 12 个分类页分页全采
+  // 策略 A（主路径）：官方分类页分页采集（cats 可为指定子集）
   let catTotal = 0;
   try {
-    for (const cat of KNOWN_CATEGORIES) {
+    for (const cat of cats) {
       let page = 0;
       while (page < maxPages && (limit <= 0 || raw.length < limit)) {
         const url =
@@ -254,8 +273,9 @@ export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30 } = 
     console.warn(`[prmpt] 分类页采集异常: ${e.message}`);
   }
 
-  // 策略 B（兜底）：分类页整体 0 条时才回退 /gallery 分页
-  if (raw.length === 0) {
+  // 策略 B（兜底）：仅「全量模式」下分类页整体 0 条时才回退 /gallery 分页。
+  // 单分类排查模式下 0 条就是 0 条——明确报告，不悄悄采回别的分类数据。
+  if (raw.length === 0 && cats.length >= allCats.length) {
     console.log(`[prmpt] 分类页解析为 0，回退 /gallery 分页`);
     try {
       let page = 0;
@@ -274,8 +294,9 @@ export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30 } = 
     }
   }
 
-  // 策略 C（兜底）：仍为 0，回退首页 __NEXT_DATA__（保证不退化到 0）
-  if (raw.length === 0) {
+  // 策略 C（兜底）：仅「全量模式」下仍为 0 才回退首页 __NEXT_DATA__。
+  // 单分类模式 0 条则保持 0，交由上层在日志里明确暴露问题。
+  if (raw.length === 0 && cats.length >= allCats.length) {
     console.log(`[prmpt] gallery 解析为 0，回退首页 __NEXT_DATA__ 提取`);
     try {
       const home = await fetchText(BASE, { delay: 800 });
@@ -292,6 +313,11 @@ export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30 } = 
     }
   }
 
+  if (raw.length === 0) {
+    console.warn(
+      `[prmpt] ⚠ 本次指定分类 ${cats.join(", ")} 一条都没采到——请检查 https://prmpt.it.com/category/${cats[0]} 的可访问性与页面结构`
+    );
+  }
   console.log(`[prmpt] 合计 ${raw.length} 条（分类页卡片约 ${catTotal}）`);
   return raw;
 }

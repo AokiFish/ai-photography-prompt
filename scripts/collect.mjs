@@ -6,8 +6,11 @@
 // 本地也可跑（需能访问源站）： node scripts/collect.mjs
 //
 // 环境变量：
-//   PRMPT_LIMIT        PRMPT 最多条数（默认 0 = 抓全部 gallery 分页）
-//   LEXICA_PER_QUERY   Lexica 每个检索词最多条数（默认 8；action 内已装 playwright 过 Cloudflare）
+//   PRMPT_CATEGORY     只抓指定分类（逗号分隔，如 "fashion" 或 "fashion,portrait"）。
+//                       留空 = 官方全部 12 类。用于「一个分类一个分类地抓」排查问题。
+//   PRMPT_LIMIT        PRMPT 最多条数（默认 0 = 不限）
+//   LEXICA_PER_QUERY   Lexica 每个检索词最多条数（默认 0 = action 内跳过；
+//                       lexica 被 Cloudflare 拦数据中心 IP，仅本地住宅 IP 跑时设 >0）
 //   FETCH_DELAY        请求间隔(ms)（默认 1500）
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
@@ -26,7 +29,11 @@ const JSON_PATH = join(DATA_DIR, "prompts.json");
 const SQL_PATH = join(DATA_DIR, "prompts.sql");
 
 const LIMIT = Number(process.env.PRMPT_LIMIT ?? 0); // 0 = 抓全部（不限条数）
-const PER_QUERY = Number(process.env.LEXICA_PER_QUERY ?? 8);
+const CATEGORIES = (process.env.PRMPT_CATEGORY ?? "")
+  .split(",")
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+const PER_QUERY = Number(process.env.LEXICA_PER_QUERY ?? 0); // action 内默认 0 = 跳过 lexica
 const DELAY = Number(process.env.FETCH_DELAY ?? 1500);
 
 function loadDataset() {
@@ -50,7 +57,12 @@ async function main() {
   const t0 = Date.now();
 
   const [prmpt, lexica] = await Promise.all([
-    collectPrmpt({ limit: LIMIT, delay: DELAY }),
+    collectPrmpt({
+      limit: LIMIT,
+      delay: DELAY,
+      // PRMPT_CATEGORY 未设 = 抓官方全部 12 类；设了则只抓指定分类（逐类排查用）
+      categories: CATEGORIES.length ? CATEGORIES : null,
+    }),
     // action 内 LEXICA_PER_QUERY=0 时完全跳过 lexica（被 Cloudflare 拦），
     // 不触碰 playwright / fetch，省时且不刷迷惑日志。
     PER_QUERY > 0

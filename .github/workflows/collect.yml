@@ -1,12 +1,21 @@
 name: Collect Prompts (Daily)
 
-# 每天 08:00（北京时间 = 00:00 UTC）采集 PRMPT，更新仓库数据集 data/prompts.sql/.json 并推回 main。
-# 推送后由 sync-d1.yml 自动把数据集同步进 Cloudflare D1。
-# 也可在 Actions 页面手动 `Run workflow` 触发。
+# 采集 prmpt.it.com 官方分类页 → 更新仓库数据集 data/prompts.sql/.json → 推送 main
+# → sync-d1.yml 自动同步进 Cloudflare D1。
+#
+# 用法：
+#   定时（每天 08:00 北京时间）：抓官方全部 12 个分类。
+#   手动 Run workflow：可在 category 输入框填单个分类（如 fashion），
+#   实现「一个分类一个分类地抓」，便于逐类排查问题。
 on:
   schedule:
     - cron: "0 0 * * *" # UTC 00:00 → 北京时间 08:00
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      category:
+        description: "只抓一个分类（留空=全部12类）。可选: architectural artistic automotive beauty cinematic fashion landscape lifestyle lingerie portrait product romantic"
+        required: false
+        default: ""
 
 permissions:
   contents: write # 需要把数据集提交回仓库
@@ -28,19 +37,18 @@ jobs:
         with:
           node-version: 22
 
-      # 0) lexica 被 Cloudflare 拦，需无头浏览器过质询；action 内安装 playwright + chromium
-      - name: Install Playwright (lexica Cloudflare bypass)
-        run: npm install --no-save playwright && npx playwright install --with-deps chromium
-
-      # 1) 抓取来源，更新仓库数据集文件（data/prompts.sql + .json）
-      #    PRMPT 不设上限，抓全部 gallery 分页；LEXICA 走浏览器过 Cloudflare 质询采集。
-      - name: Scrape sources → dataset files
+      # 抓取来源 → 更新仓库数据集文件（data/prompts.sql + .json）
+      # 注意：不再安装 playwright/chromium——lexica 被 Cloudflare 拦数据中心 IP，
+      # action 内采不到（本地住宅 IP 跑 node scripts/collect.mjs 并设
+      # LEXICA_PER_QUERY=8 才会走浏览器路径采 lexica）。action 只抓 prmpt。
+      - name: Scrape PRMPT (official category pages)
         env:
           FETCH_DELAY: "1500" # 请求间隔(ms)
-          LEXICA_PER_QUERY: "20" # 每个检索词最多条数（浏览器路径）
+          PRMPT_CATEGORY: ${{ github.event.inputs.category }} # 手动触发时可选单分类；定时为空=全部
+          LEXICA_PER_QUERY: "0" # action 内跳过 lexica
         run: node scripts/collect.mjs
 
-      # 2) 提交数据集回仓库（触发 sync-d1.yml 同步 D1）
+      # 提交数据集回仓库（触发 sync-d1.yml 同步 D1）
       - name: Commit dataset
         run: |
           git config user.name "github-actions[bot]"
