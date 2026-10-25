@@ -51,7 +51,11 @@ async function main() {
 
   const [prmpt, lexica] = await Promise.all([
     collectPrmpt({ limit: LIMIT, delay: DELAY }),
-    collectLexica({ perQuery: PER_QUERY, delay: DELAY }),
+    // action 内 LEXICA_PER_QUERY=0 时完全跳过 lexica（被 Cloudflare 拦），
+    // 不触碰 playwright / fetch，省时且不刷迷惑日志。
+    PER_QUERY > 0
+      ? collectLexica({ perQuery: PER_QUERY, delay: DELAY })
+      : Promise.resolve([]),
   ]);
 
   // 仓库现有数据集作为去重基底（按 id / image_url）。
