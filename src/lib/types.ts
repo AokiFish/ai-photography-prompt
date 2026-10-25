@@ -18,6 +18,9 @@ export interface Prompt {
   source: Source; // 数据来源（分类维度之一）
   sourceUrl?: string | null;
   title?: string | null;
+  /** 简短描述（源站一句话「简单陈述」）——**图集卡片只显示它**，排版才不会长短失控。 */
+  abstract?: string | null;
+  /** 完整提示词——只在详情页 / 弹窗 / 复制按钮里用，卡片上不要铺。 */
   promptText: string; // 核心/完整提示词
   negativePrompt?: string | null;
   category?: string | null; // 自由分类标签（中文，如「夜景」「人像」）

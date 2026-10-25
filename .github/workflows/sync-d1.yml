@@ -25,6 +25,24 @@ jobs:
         with:
           node-version: 22
 
+      # 结构演进：只做「加列」，必须在写批次**之前**跑，否则 INSERT 会因未知列全部失败。
+      # SQLite/D1 没有 ADD COLUMN IF NOT EXISTS，列已存在时 wrangler 会报 duplicate column，
+      # 属预期结果，容错跳过即可（幂等）。
+      # ⚠ 红线：绝不在这里做 DROP COLUMN / DROP TABLE / 删数据。
+      - name: "Ensure schema is up to date (additive column only)"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN 未配置，跳过结构演进"
+            exit 0
+          fi
+          CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
+          npx --yes wrangler@latest d1 execute ai-photography-prompt --remote \
+            --command "ALTER TABLE prompts ADD COLUMN abstract TEXT;" \
+            || echo "· abstract 列已存在（重复执行属预期），继续"
+
       - name: Split SQL into small batches
         run: node scripts/split-d1-sql.mjs
 

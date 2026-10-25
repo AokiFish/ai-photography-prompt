@@ -45,6 +45,14 @@ export function extractDetail(html) {
     html
   );
 
+  // 简短描述（abstract）= og:description，源站的一句话「简单陈述」。
+  // ⚠ 它不是 prompt！只用在图集卡片上当简介（卡片不能铺完整 prompt，长短不一是灾难）。
+  const ogDesc = pick(
+    /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i,
+    html
+  );
+  const abstract = ogDesc ? cleanText(ogDesc).slice(0, 400) : null;
+
   // 标题：优先 h1（干净），回退 <title>（去掉站点后缀 " — AI Photo Prompt · PRMPT"）
   const h1 = pick(/<h1[^>]*>([^<]+)<\/h1>/i, html);
   const rawTitle = h1 || pick(/<title>([^<]+)<\/title>/i, html);
@@ -85,13 +93,7 @@ export function extractDetail(html) {
     }
   }
   // 兜底：极少数详情页没有 Prompt Transcript 区块（结构变更）才回退 abstract
-  if (!promptText) {
-    const ogDesc = pick(
-      /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i,
-      html
-    );
-    if (ogDesc) promptText = ogDesc.slice(0, 2000);
-  }
+  if (!promptText && ogDesc) promptText = ogDesc.slice(0, 2000);
 
   // 权威分类：面包屑 /category/<key>（详情页 SSR，最可靠；不扫描卡片全文乱猜）
   const catM = html.match(/href=["'][^"']*\/category\/([a-z0-9-]+)/i);
@@ -99,6 +101,7 @@ export function extractDetail(html) {
 
   return {
     title: title ? title.slice(0, 120) : null,
+    abstract: abstract || null,
     promptText: promptText || null,
     negativePrompt: negativePrompt || null,
     imageUrl: ogImage || null,
@@ -194,6 +197,7 @@ export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30, cat
         source: "prmpt",
         sourceUrl: s.sourceUrl,
         title: d.title,
+        abstract: d.abstract,
         promptText: d.promptText,
         negativePrompt: d.negativePrompt,
         category: cat,

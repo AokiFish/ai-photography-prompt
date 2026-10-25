@@ -29,7 +29,7 @@ export function PromptCard({ prompt, onOpen }: { prompt: Prompt; onOpen?: () => 
         <div className="absolute inset-0 transition-transform duration-700 ease-editorial group-hover:scale-[1.04]">
           <PlateImage
             src={prompt.imageUrl}
-            alt={prompt.title ?? prompt.promptText.slice(0, 40)}
+            alt={prompt.title ?? prompt.abstract ?? ""}
             styleKey={prompt.style}
             label={catLabel ?? undefined}
           />
@@ -58,13 +58,12 @@ export function PromptCard({ prompt, onOpen }: { prompt: Prompt; onOpen?: () => 
         {catLabel && (
           <span className="mono" style={{ color: "var(--faint)" }}>{catLabel}</span>
         )}
-        <p className="line-clamp-4" style={{ fontFamily: "var(--font-mono),monospace", fontSize: 12.5, lineHeight: 1.7, color: "var(--paper-2)" }}>
-          {prompt.promptText}
-        </p>
-        {prompt.negativePrompt && (
-          <p className="line-clamp-2" style={{ fontFamily: "var(--font-mono),monospace", fontSize: 11.5, lineHeight: 1.6, color: "var(--faint)" }}>
-            <span style={{ color: "var(--accent)" }}>neg </span>
-            {prompt.negativePrompt}
+        {/* 卡片只显示「简短描述」（源站一句话陈述）。
+            ⚠ 绝不在此铺 promptText：完整提示词长短悬殊（有的是 3000 字符 JSON），
+            会让瀑布流卡片高度失控、排版很丑。完整 prompt 只在详情页/弹窗/复制按钮里用。 */}
+        {prompt.abstract && (
+          <p className="line-clamp-3" style={{ fontSize: 13, lineHeight: 1.75, color: "var(--paper-2)" }}>
+            {prompt.abstract}
           </p>
         )}
         <div

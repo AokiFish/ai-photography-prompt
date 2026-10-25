@@ -181,7 +181,7 @@ function sqlVal(v) {
 /** 生成 INSERT OR REPLACE 语句（prompts 表）。 */
 export function promptsToSql(rows) {
   const cols = [
-    "id", "source", "source_url", "title", "prompt_text",
+    "id", "source", "source_url", "title", "abstract", "prompt_text",
     "negative_prompt", "category", "style", "model", "image_url",
     "width", "height", "tags", "collected_at",
   ];
@@ -191,6 +191,7 @@ export function promptsToSql(rows) {
       sqlVal(r.source),
       sqlVal(r.sourceUrl),
       sqlVal(r.title),
+      sqlVal(r.abstract),
       sqlVal(r.promptText),
       sqlVal(r.negativePrompt),
       sqlVal(r.category),

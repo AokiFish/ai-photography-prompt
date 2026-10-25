@@ -21,7 +21,8 @@ export async function generateMetadata({
   if (!prompt) return { title: "未找到提示词" };
   return {
     title: prompt.title ?? "提示词详情",
-    description: (prompt.promptText ?? "").slice(0, 120),
+    // SEO 描述优先用简短陈述；完整 prompt（可能是 JSON）截出来没法读。
+    description: (prompt.abstract ?? prompt.promptText ?? "").slice(0, 120),
   };
 }
 

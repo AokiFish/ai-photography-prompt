@@ -94,10 +94,12 @@ async function main() {
   for (const n of normalized) {
     const ex = byId.get(n.id);
     if (ex) {
-      // 覆盖更新：用新采集的权威字段修正旧数据（重点是修正错把 abstract 当 prompt 的问题）。
-      // 源站给的 title/category/imageUrl 是权威值，新值非空即覆盖（不只空了才补），
-      // 这样历史条目也能被修正（如标题去掉 "— AI Photo Prompt · PRMPT" 后缀）；绝不删除条目。
+      // 覆盖更新：用新采集的权威字段修正旧数据。
+      // 源站给的 title/abstract/category/imageUrl/promptText 都是权威值，
+      // 新值非空即覆盖（不只空了才补），这样历史条目也能被修正
+      //（如标题去掉 "— AI Photo Prompt · PRMPT" 后缀、补齐 abstract）；绝不删除条目。
       if (n.promptText && n.promptText.trim()) ex.promptText = n.promptText;
+      if (n.abstract && n.abstract.trim()) ex.abstract = n.abstract;
       if (n.negativePrompt && n.negativePrompt.trim()) ex.negativePrompt = n.negativePrompt;
       if (n.category) ex.category = n.category;
       if (n.imageUrl) ex.imageUrl = n.imageUrl;

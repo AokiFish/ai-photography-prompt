@@ -8,6 +8,7 @@ interface PromptRow {
   source: string;
   source_url: string | null;
   title: string | null;
+  abstract?: string | null;
   prompt_text: string;
   negative_prompt: string | null;
   category: string | null;
@@ -64,6 +65,7 @@ function rowToPrompt(r: PromptRow): Prompt {
     source: r.source as Source,
     sourceUrl: r.source_url,
     title: r.title,
+    abstract: r.abstract ?? null,
     promptText: r.prompt_text,
     negativePrompt: r.negative_prompt,
     category: normalizeReadCategory(r.category),
