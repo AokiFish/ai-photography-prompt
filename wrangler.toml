@@ -4,7 +4,15 @@ compatibility_flags = ["nodejs_compat"]
 
 pages_build_output_dir = ".vercel/output/static"
 
-# D1 数据库绑定（生产）不在本文件声明，改在 Cloudflare Pages 项目控制台配置，
-# 避免把 database UUID 写进公开仓库：
-#   项目 Settings → Functions → D1 database bindings → Variable name 填 `DB`，选数据库 `ai-photography-prompt`
-# 本地 `next dev` 不绑 D1，自动走 src/data/seed.ts 种子兜底；首次建表在 D1 控制台 Console 执行 migrations/0001_init.sql
+# D1 数据库绑定。本项目 wrangler.toml 含 pages_build_output_dir，因此它成为
+# Pages 配置的唯一事实来源（source of truth），D1 绑定必须在此声明，
+# Cloudflare 控制台对应项会变灰只读（无法在后台配置，这是预期行为）。
+# database_id 必须填真实 UUID 字面量：Pages 发布阶段不展开 ${} 占位符
+# （实测曾因此报 Error 8000022: Invalid database UUID (${D1_DATABASE_ID})）。
+# 安全说明：D1 database_id 是资源标识符、非密钥，Cloudflare 官方示例即直接写入；
+# 若坚持完全不暴露，请将 GitHub 仓库设为 Private 后再填真实 id。
+[[d1_databases]]
+binding = "DB"
+database_name = "ai-photography-prompt"
+database_id = "46e8a1c621ca03e2dab903010fb5a2c6"
+migrations_dir = "migrations"
