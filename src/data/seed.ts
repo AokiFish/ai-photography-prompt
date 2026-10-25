@@ -31,7 +31,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-prmpt-01",
     source: "prmpt",
-    sourceUrl: "https://prmpt.it.com/",
+    sourceUrl: null,
     title: "Editorial Portrait, Soft Window Light",
     promptText:
       "editorial fashion portrait of a woman in a linen suit, soft directional window light, shallow depth of field, muted beige backdrop, minimal makeup, calm expression, shot on 85mm f/1.8, kodak portra 400 tones, refined and quiet",
@@ -46,7 +46,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-prmpt-02",
     source: "prmpt",
-    sourceUrl: "https://prmpt.it.com/",
+    sourceUrl: null,
     title: "Cinematic Street, Golden Hour",
     promptText:
       "cinematic street photograph at golden hour, a cyclist silhouetted against warm low sun, long shadows on cobblestone, lens flare, teal-and-amber grade, anamorphic, 35mm, film grain, contemplative mood",
@@ -61,7 +61,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-prmpt-03",
     source: "prmpt",
-    sourceUrl: "https://prmpt.it.com/",
+    sourceUrl: null,
     title: "Minimal Still Life, Ceramic",
     promptText:
       "minimalist still life, a single matte ceramic vessel on a sand-colored plinth, softbox light from upper left, one elongated shadow, generous negative space, warm neutral palette, precise symmetry, gallery object photography",
@@ -76,7 +76,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-prmpt-04",
     source: "prmpt",
-    sourceUrl: "https://prmpt.it.com/",
+    sourceUrl: null,
     title: "Noir Alley, Rain",
     promptText:
       "film noir alley after rain, single figure under a streetlamp, wet pavement reflecting amber light, heavy shadows, high contrast black and white, fog at the end of the lane, 50mm, grain, brooding",
@@ -91,7 +91,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-prmpt-05",
     source: "prmpt",
-    sourceUrl: "https://prmpt.it.com/",
+    sourceUrl: null,
     title: "Monochrome Profile, Chiaroscuro",
     promptText:
       "high-contrast black and white portrait, dramatic chiaroscuro, half face lit by a single hard light, deep shadow side, textured skin, large format look, classical, expressive",
@@ -106,7 +106,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-prmpt-06",
     source: "prmpt",
-    sourceUrl: "https://prmpt.it.com/",
+    sourceUrl: null,
     title: "35mm Documentary, Candid",
     promptText:
       "candid 35mm documentary photograph, an old man reading a newspaper at a café, faded kodak gold tones, light leak, authentic imperfect grain, natural soft light, nostalgic, unposed",
@@ -121,7 +121,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-prmpt-07",
     source: "prmpt",
-    sourceUrl: "https://prmpt.it.com/",
+    sourceUrl: null,
     title: "Macro Dewdrop, Botanical",
     promptText:
       "extreme macro of a dew drop on a fern frond, refracting morning light, ultra sharp, soft bokeh background, vivid greens, shallow depth of field, crisp and luminous, botanical fine art",
@@ -136,7 +136,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-prmpt-08",
     source: "prmpt",
-    sourceUrl: "https://prmpt.it.com/",
+    sourceUrl: null,
     title: "Landscape, Fog Mountains",
     promptText:
       "serene landscape, layered misty mountains at dawn, cool muted palette, faint sun behind clouds, minimal foreground, large format, tranquil, fine art print",
@@ -151,7 +151,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-prmpt-09",
     source: "prmpt",
-    sourceUrl: "https://prmpt.it.com/",
+    sourceUrl: null,
     title: "Fashion Full Length, Studio",
     promptText:
       "full-length fashion photograph, model in flowing silk dress, hard rim light, dark studio, strong silhouette, couture, vogue editorial, 85mm, clean retouch",
@@ -168,7 +168,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-lexica-01",
     source: "lexica",
-    sourceUrl: "https://lexica.art/",
+    sourceUrl: null,
     title: "Cyberpunk Noir City",
     promptText:
       "cyberpunk noir city night, neon signs cyan and magenta reflecting on wet alley pavement, cinematic haze, rain droplets, high contrast, futuristic gritty, atmospheric depth",
@@ -185,7 +185,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-lexica-02",
     source: "lexica",
-    sourceUrl: "https://lexica.art/",
+    sourceUrl: null,
     title: "Cinematic Portrait, Moody",
     promptText:
       "cinematic portrait of a man in a trench coat, smoke drifting, shallow depth of field, teal-orange grade, dramatic side light, 35mm film grain, moody",
@@ -202,7 +202,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-lexica-03",
     source: "lexica",
-    sourceUrl: "https://lexica.art/",
+    sourceUrl: null,
     title: "Minimal Architectural",
     promptText:
       "minimalist architecture photography, concrete staircase with strong diagonal shadow, monochrome, negative space, precise geometry, soft overcast light",
@@ -219,7 +219,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-lexica-04",
     source: "lexica",
-    sourceUrl: "https://lexica.art/",
+    sourceUrl: null,
     title: "Vintage Film, Road Trip",
     promptText:
       "vintage 35mm film photo, two friends on a road trip at dusk, super 8 grain, faded tones, warm light leak, nostalgic, authentic",
@@ -236,7 +236,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-lexica-05",
     source: "lexica",
-    sourceUrl: "https://lexica.art/",
+    sourceUrl: null,
     title: "Black White, Dancer",
     promptText:
       "black and white photograph of a dancer mid-leap, motion blurred fabric, high key, elegant, studio, fine art",
@@ -253,7 +253,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-lexica-06",
     source: "lexica",
-    sourceUrl: "https://lexica.art/",
+    sourceUrl: null,
     title: "Macro, Insect Wing",
     promptText:
       "macro shot of a dragonfly wing, iridescent detail, ultra sharp, dark background, bokeh, scientific beauty, luminous",
@@ -270,7 +270,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-lexica-07",
     source: "lexica",
-    sourceUrl: "https://lexica.art/",
+    sourceUrl: null,
     title: "Landscape, Desert Dunes",
     promptText:
       "fine art landscape, wind-carved desert dunes at blue hour, long shadows, minimal, cool warm contrast, large format, peaceful",
@@ -287,7 +287,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-lexica-08",
     source: "lexica",
-    sourceUrl: "https://lexica.art/",
+    sourceUrl: null,
     title: "Editorial, Red Dress",
     promptText:
       "editorial fashion, woman in a red dress against brutalist concrete, hard sunlight, bold shadow, confident pose, vogue, 85mm",
@@ -304,7 +304,7 @@ const RAW_SEED: Prompt[] = [
   {
     id: "seed-lexica-09",
     source: "lexica",
-    sourceUrl: "https://lexica.art/",
+    sourceUrl: null,
     title: "Noir, Smoky Bar",
     promptText:
       "film noir interior, a detective in a smoky bar, venetian blind shadows across his face, low key light, amber whiskey glass, high contrast, 50mm grain",

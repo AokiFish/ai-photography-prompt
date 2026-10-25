@@ -1,5 +1,6 @@
 import { getDB } from "@/lib/db";
 import { SEED_PROMPTS } from "@/data/seed";
+import { resolveDetailUrl } from "@/lib/types";
 import type { Prompt, Source, StyleKey } from "@/lib/types";
 
 interface PromptRow {
@@ -98,15 +99,24 @@ export async function getPrompts(filters: PromptFilters = {}): Promise<Prompt[]>
 }
 
 /**
- * 按图去重：同一 image_url 只保留最早采集的一条（其 style/category 即主归属）。
+ * 按图去重：同一 image_url 只保留一条，作为它的“主类别”归属，
+ * 杜绝跨「核心 / 专业」筛选重复出现。
+ *
+ * 保留规则不是“谁采集得早”，而是**信息质量优先**：
+ * 有真实内页链接 > 有标题 > 有分类 > 采集时间早。
+ * 早期首页兜底写入的脏记录（source_url 为站点根、无标题/分类）因此
+ * 不会压制后来采集的完整记录——否则弹窗的「打开完整网页」会跳到源站首页。
  * image_url 为空的行无法按图去重，按各自 id 保留。
- * 目的：每张图只在一个主类别里出现，不跨「核心 / 专业」筛选重复。
  */
 function dedupeByImage(rows: Prompt[]): Prompt[] {
   const byImg = new Map<string, Prompt>();
   const noImg: Prompt[] = [];
-  // 升序遍历：最早采集的一条作为该图的主记录
-  const sorted = [...rows].sort((a, b) => a.collectedAt - b.collectedAt);
+  const score = (p: Prompt) =>
+    (resolveDetailUrl(p) ? 4 : 0) + (p.title ? 2 : 0) + (p.category ? 1 : 0);
+  // 质量分降序 + 采集时间升序：同分时保留最早的一条
+  const sorted = [...rows].sort(
+    (a, b) => score(b) - score(a) || a.collectedAt - b.collectedAt
+  );
   for (const r of sorted) {
     if (r.imageUrl) {
       if (byImg.has(r.imageUrl)) continue;

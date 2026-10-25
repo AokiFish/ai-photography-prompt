@@ -35,4 +35,12 @@ jobs:
           fi
           # 去除 Secrets 粘贴时常带的换行/空格，避免 Authorization 头格式非法
           CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
+          # 0) 先清理历史脏数据：早期「首页兜底」采集写入 D1 的记录，
+          #    source_url 是站点根（无 /prompt/ 内页），会让弹窗「打开完整网页」跳到源站首页。
+          #    prmpt 的有效记录一定来自详情页，URL 必含 /prompt/，此删除不会误伤。
+          cat > .d1-cleanup.sql <<'SQL'
+          DELETE FROM prompts WHERE source = 'prmpt' AND (source_url IS NULL OR source_url NOT LIKE '%/prompt/%');
+          SQL
+          npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --file=.d1-cleanup.sql
+          # 1) 再把仓库数据集刷进 D1（INSERT OR REPLACE：覆盖同 id、追加新 id）
           npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --file=data/prompts.sql

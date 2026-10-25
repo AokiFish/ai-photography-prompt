@@ -95,6 +95,35 @@ export const PRO_CATEGORIES: Record<string, string> = {
   romantic: "浪漫",
 };
 
+const SOURCE_ROOTS: Record<string, string> = {
+  prmpt: "https://prmpt.it.com",
+  lexica: "https://lexica.art",
+};
+
+function isRootUrl(url: string, root: string): boolean {
+  return url.replace(/\/+$/, "") === root;
+}
+
+/**
+ * 解析「打开完整网页」应跳转的**真实内页** URL。
+ * - 采集记录优先用 source_url（详情页 URL）；
+ * - source_url 缺失或为站点根（早期首页兜底脏数据）时，若 id 形如
+ *   `<source>:<slug>` 且非首页兜底（`home:` 前缀），按站点规则拼出详情页；
+ * - 确实找不到真实内页 → 返回 null，调用方应**隐藏按钮**，
+ *   而不是给一个指向源站首页的错误链接。
+ */
+export function resolveDetailUrl(
+  p: Pick<Prompt, "id" | "source" | "sourceUrl">
+): string | null {
+  const root = SOURCE_ROOTS[p.source];
+  if (p.sourceUrl && (!root || !isRootUrl(p.sourceUrl, root))) return p.sourceUrl;
+  const slug = /^[a-z]+:(.+)$/.exec(p.id)?.[1];
+  if (!slug || slug.startsWith("home:")) return null;
+  if (p.source === "prmpt") return `https://prmpt.it.com/prompt/${slug}`;
+  if (p.source === "lexica") return `https://lexica.art/prompt/${slug}`;
+  return null;
+}
+
 // 弹窗里的「类型介绍」——每种摄影语言的简要说明（编辑式口吻）。
 export const STYLE_INTRO: Record<StyleKey, string> = {
   cinematic:
