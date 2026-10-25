@@ -22,7 +22,7 @@ interface PromptRow {
 // 历史遗留：旧 lexica 采集器曾把中文分类（人像/时尚…）直接入 DB，
 // 与现筛选行的英文键不一致。读取时反向归一，清理脏数据，无需重爬。
 const CN_CATEGORY_TO_KEY: Record<string, string> = {
-  人像: "portrait",
+  人像: "fashion",
   建筑: "architectural",
   纪实: "lifestyle",
   自然: "landscape",
@@ -35,8 +35,8 @@ const CN_CATEGORY_TO_KEY: Record<string, string> = {
   浪漫: "romantic",
   生活方式: "lifestyle",
   产品: "product",
-  电影: "cinematic",
-  肖像: "portrait",
+  电影: "artistic",
+  肖像: "fashion",
 };
 
 function normalizeReadCategory(raw: string | null): string | null {

@@ -6,8 +6,8 @@
 // 本地也可跑（需能访问源站）： node scripts/collect.mjs
 //
 // 环境变量：
-//   PRMPT_LIMIT        PRMPT 单轮最多条数（默认 60）
-//   LEXICA_PER_QUERY   Lexica 每个检索词最多条数（默认 8；action 里设 0 跳过，因数据中心 IP 被 Cloudflare 拦）
+//   PRMPT_LIMIT        PRMPT 最多条数（默认 0 = 抓全部 gallery 分页）
+//   LEXICA_PER_QUERY   Lexica 每个检索词最多条数（默认 8；action 内已装 playwright 过 Cloudflare）
 //   FETCH_DELAY        请求间隔(ms)（默认 1500）
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
@@ -25,7 +25,7 @@ const DATA_DIR = join(ROOT, "data");
 const JSON_PATH = join(DATA_DIR, "prompts.json");
 const SQL_PATH = join(DATA_DIR, "prompts.sql");
 
-const LIMIT = Number(process.env.PRMPT_LIMIT ?? 60);
+const LIMIT = Number(process.env.PRMPT_LIMIT ?? 0); // 0 = 抓全部（不限条数）
 const PER_QUERY = Number(process.env.LEXICA_PER_QUERY ?? 8);
 const DELAY = Number(process.env.FETCH_DELAY ?? 1500);
 

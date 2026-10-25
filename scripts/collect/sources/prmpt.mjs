@@ -117,10 +117,20 @@ export function extractDetail(html) {
     .trim()
     .slice(0, 2000);
 
+  // 从详情页提取「明确标注」的分类（优于 gallery 卡片全文扫描，避免误判人像等）：
+  // 1) 面包屑 /category/<key>  2) URL 中 ?category=<key>  3) <meta property="article:section">
+  // 取不到则回退 null，由调用方回退到卡片标注的 siteCategory。
+  const catM =
+    html.match(/href=["'][^"']*\/category\/([a-z0-9-]+)/i) ||
+    html.match(/[?&]category=([a-z0-9-]+)/i) ||
+    html.match(/<meta[^>]+property=["']article:section["'][^>]+content=["']([^"']+)["']/i);
+  const detailCategory = catM ? catM[1].toLowerCase() : null;
+
   return {
     title: title ? title.slice(0, 120) : null,
     promptText: promptText || null,
     imageUrl: ogImage || null,
+    category: detailCategory, // 详情页权威分类，collectPrmpt 会优先采用
   };
 }
 
@@ -180,15 +190,15 @@ function extractHomepage(html) {
  * @param {number} opts.delay    请求间隔(ms)
  * @param {number} opts.maxPages 最多翻页数（默认 6）
  */
-export async function collectPrmpt({ limit = 60, delay = 1500, maxPages = 6 } = {}) {
+export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30 } = {}) {
   const raw = [];
   const seen = new Set();
 
-  // 策略 A：/gallery 分页
+  // 策略 A：/gallery 分页（limit<=0 表示抓全部，直到末页或 maxPages）
   let galleryTotal = 0;
   try {
     let page = 0;
-    while (raw.length < limit && page < maxPages) {
+    while (page < maxPages && (limit <= 0 || raw.length < limit)) {
       const url = page === 0 ? `${BASE}/gallery` : `${BASE}/gallery?page=${page + 1}`;
       const html = await fetchText(url, { delay: page === 0 ? 800 : delay });
       const cards = parseGalleryCards(html);
@@ -210,7 +220,7 @@ export async function collectPrmpt({ limit = 60, delay = 1500, maxPages = 6 } = 
             title: d.title,
             promptText: d.promptText,
             negativePrompt: null,
-            category: c.siteCategory, // 原始标签，交给 normalizeItem 映射
+            category: d.category || c.siteCategory, // 详情页明确分类优先，否则卡片标注
             style: null,
             model: null,
             imageUrl: d.imageUrl || c.galleryImage,

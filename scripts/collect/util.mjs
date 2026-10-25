@@ -84,9 +84,10 @@ export function inferStyle(text = "") {
 // 键同名。此处集中把站点原始标签归一为我们的专业分类键，杜绝各自猜测乱分。
 
 // 专业分类键集合（与 src/lib/types.ts 的 PRO_CATEGORIES 键保持一致）。
+// 不含 portrait（用户确认无「人像」分类）、不含 cinematic（电影感归核心风格，避免重复）。
 export const KNOWN_CATEGORIES = new Set([
-  "architectural", "artistic", "automotive", "beauty", "cinematic",
-  "fashion", "landscape", "lifestyle", "lingerie", "portrait", "product", "romantic",
+  "architectural", "artistic", "automotive", "beauty",
+  "fashion", "landscape", "lifestyle", "lingerie", "product", "romantic",
 ]);
 
 // 同义词 → 专业分类键
@@ -95,24 +96,26 @@ const CATEGORY_ALIASES = {
   nude: "lingerie", wedding: "romantic", travel: "lifestyle",
   car: "automotive", building: "architectural", "fine-art": "artistic",
   "fine art": "artistic",
+  // 用户确认：站点无「人像」分类，源站标 portrait 归入时尚题材；
+  // 「电影感」属核心风格维度，电影感题材归入艺术，专业分类不再单列。
+  portrait: "fashion", cinematic: "artistic",
 };
 
 // 中文标签 → 专业分类键（防御：采集器本应只产出英文标签，此处兜底历史/异常中文）
 const CATEGORY_CN = {
-  人像: "portrait", 建筑: "architectural", 纪实: "lifestyle", 自然: "landscape",
+  人像: "fashion", 建筑: "architectural", 纪实: "lifestyle", 自然: "landscape",
   夜景: "noir", 时尚: "fashion", 风光: "landscape", 艺术: "artistic",
   汽车: "automotive", 内衣: "lingerie", 浪漫: "romantic", 生活方式: "lifestyle",
-  产品: "product", 电影: "cinematic", 肖像: "portrait",
+  产品: "product", 电影: "artistic", 肖像: "fashion",
 };
 
-// 专业分类键 → 核心风格键（CORE_STYLES 子集 + portrait/landscape）。
-// 显式映射、集中维护，不在各采集器里散落判断。
+// 专业题材 → 核心摄影语言（style 只能取 CORE_STYLES 的 6 个值 + other，
+// 绝不取 portrait/landscape，杜绝「核心/专业」重复与不存在的「人像」分类）。
 export const CATEGORY_TO_STYLE = {
-  fashion: "portrait", beauty: "portrait", lingerie: "portrait",
-  portrait: "portrait", lifestyle: "portrait",
-  landscape: "landscape", cinematic: "cinematic", artistic: "cinematic",
+  fashion: "cinematic", beauty: "cinematic", lingerie: "noir",
+  lifestyle: "film", landscape: "minimalist", artistic: "monochrome",
   romantic: "cinematic", architectural: "minimalist", automotive: "cinematic",
-  product: "other",
+  product: "minimalist",
 };
 
 /** 站点原始分类标签 → 我们的专业分类键（英文）。未知则原样保留（并在 types.ts 补 PRO_CATEGORIES）。*/
@@ -173,13 +176,14 @@ export function promptsToSql(rows) {
 }
 
 /**
- * 完整数据集 SQL（INSERT OR REPLACE，不含 DELETE）。
- * 用于把仓库内的数据集同步进 Cloudflare D1：主键冲突时覆盖、不主动删除，
- * 避免误清 D1 中已有的数据（部署同步是「刷新/追加」，不是「整表重建」）。
+ * 完整数据集 SQL（先 DELETE 再 INSERT，全量同步）。
+ * 以仓库数据集为准刷新 D1：「仓库 = 真相来源，D1 = 镜像」。
+ * 这样旧格式 / 脏分类（如人像、电影）数据自然被清掉，无需手爬修正。
  */
 export function datasetSql(rows, metas = []) {
   return (
     `-- 数据集快照 @ ${new Date().toISOString()}\n` +
+    `DELETE FROM prompts;\nDELETE FROM sources;\n` +
     promptsToSql(rows) +
     "\n" +
     sourcesMetaToSql(metas) +
