@@ -19,6 +19,33 @@ interface PromptRow {
   collected_at: number;
 }
 
+// 历史遗留：旧 lexica 采集器曾把中文分类（人像/时尚…）直接入 DB，
+// 与现筛选行的英文键不一致。读取时反向归一，清理脏数据，无需重爬。
+const CN_CATEGORY_TO_KEY: Record<string, string> = {
+  人像: "portrait",
+  建筑: "architectural",
+  纪实: "lifestyle",
+  自然: "landscape",
+  夜景: "noir",
+  时尚: "fashion",
+  风光: "landscape",
+  艺术: "artistic",
+  汽车: "automotive",
+  内衣: "lingerie",
+  浪漫: "romantic",
+  生活方式: "lifestyle",
+  产品: "product",
+  电影: "cinematic",
+  肖像: "portrait",
+};
+
+function normalizeReadCategory(raw: string | null): string | null {
+  if (!raw) return null;
+  if (raw in CN_CATEGORY_TO_KEY) return CN_CATEGORY_TO_KEY[raw];
+  // 已是英文键则原样返回（PRO_CATEGORIES 键）
+  return raw;
+}
+
 function rowToPrompt(r: PromptRow): Prompt {
   let tags: string[] = [];
   if (r.tags) {
@@ -36,7 +63,7 @@ function rowToPrompt(r: PromptRow): Prompt {
     title: r.title,
     promptText: r.prompt_text,
     negativePrompt: r.negative_prompt,
-    category: r.category,
+    category: normalizeReadCategory(r.category),
     style: r.style as StyleKey,
     model: r.model,
     imageUrl: r.image_url,

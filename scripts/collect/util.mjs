@@ -39,13 +39,70 @@ const STYLE_KEYWORDS = [
   ["landscape", "landscape", "mountain", "desert", "dawn", "scenery"],
 ];
 
-/** 从文本启发式推断摄影语言分类。 */
+/** 从文本启发式推断摄影语言分类（兜底用，不用于主分类）。 */
 export function inferStyle(text = "") {
   const t = text.toLowerCase();
   for (const [style, ...keys] of STYLE_KEYWORDS) {
     if (keys.some((k) => t.includes(k))) return style;
   }
   return "other";
+}
+
+// ── 采集 → 入库 之间的「整理 / 转换映射」层 ────────────────────────────
+// prmpt.it.com/gallery 每张卡片首行即分类标签，且多为英文、与 PRO_CATEGORIES
+// 键同名。此处集中把站点原始标签归一为我们的专业分类键，杜绝各自猜测乱分。
+
+// 专业分类键集合（与 src/lib/types.ts 的 PRO_CATEGORIES 键保持一致）。
+export const KNOWN_CATEGORIES = new Set([
+  "architectural", "artistic", "automotive", "beauty", "cinematic",
+  "fashion", "landscape", "lifestyle", "lingerie", "portrait", "product", "romantic",
+]);
+
+// 同义词 → 专业分类键
+const CATEGORY_ALIASES = {
+  editorial: "fashion", streetwear: "fashion", street: "lifestyle",
+  nude: "lingerie", wedding: "romantic", travel: "lifestyle",
+  car: "automotive", building: "architectural", "fine-art": "artistic",
+  "fine art": "artistic",
+};
+
+// 中文标签 → 专业分类键（防御：采集器本应只产出英文标签，此处兜底历史/异常中文）
+const CATEGORY_CN = {
+  人像: "portrait", 建筑: "architectural", 纪实: "lifestyle", 自然: "landscape",
+  夜景: "noir", 时尚: "fashion", 风光: "landscape", 艺术: "artistic",
+  汽车: "automotive", 内衣: "lingerie", 浪漫: "romantic", 生活方式: "lifestyle",
+  产品: "product", 电影: "cinematic", 肖像: "portrait",
+};
+
+// 专业分类键 → 核心风格键（CORE_STYLES 子集 + portrait/landscape）。
+// 显式映射、集中维护，不在各采集器里散落判断。
+export const CATEGORY_TO_STYLE = {
+  fashion: "portrait", beauty: "portrait", lingerie: "portrait",
+  portrait: "portrait", lifestyle: "portrait",
+  landscape: "landscape", cinematic: "cinematic", artistic: "cinematic",
+  romantic: "cinematic", architectural: "minimalist", automotive: "cinematic",
+  product: "other",
+};
+
+/** 站点原始分类标签 → 我们的专业分类键（英文）。未知则原样保留（并在 types.ts 补 PRO_CATEGORIES）。*/
+export function normalizeCategory(raw) {
+  if (!raw) return null;
+  const k = String(raw).trim().toLowerCase();
+  if (CATEGORY_CN[k]) return CATEGORY_CN[k];
+  if (CATEGORY_ALIASES[k]) return CATEGORY_ALIASES[k];
+  if (KNOWN_CATEGORIES.has(k)) return k;
+  return k; // 未知分类保留，交由 types.ts 增补筛选行
+}
+
+/** 中间映射层：把采集到的原始条目规范为入库字段（category 键 + style 键）。*/
+export function normalizeItem(raw) {
+  const category = normalizeCategory(raw.category);
+  const style =
+    (category && CATEGORY_TO_STYLE[category]) ||
+    raw.style ||
+    inferStyle(raw.promptText || "") ||
+    "other";
+  return { ...raw, category, style };
 }
 
 const SQL_NULL = "__NULL__";

@@ -18,12 +18,12 @@ import { execFileSync } from "node:child_process";
 
 import { collectPrmpt } from "./collect/sources/prmpt.mjs";
 import { collectLexica } from "./collect/sources/lexica.mjs";
-import { promptsToSql, sourcesMetaToSql } from "./collect/util.mjs";
+import { promptsToSql, sourcesMetaToSql, normalizeItem } from "./collect/util.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
-const LIMIT = Number(process.env.PRMPT_LIMIT ?? 12);
+const LIMIT = Number(process.env.PRMPT_LIMIT ?? 60);
 const PER_QUERY = Number(process.env.LEXICA_PER_QUERY ?? 8);
 const DELAY = Number(process.env.FETCH_DELAY ?? 1500);
 
@@ -36,9 +36,13 @@ async function main() {
     collectLexica({ perQuery: PER_QUERY, delay: DELAY }),
   ]);
 
+  // 中间层：把采集到的原始条目统一归一（站点分类 → 我们的分类键 + 风格键）。
+  // 采集器只抓原始数据，分类映射集中在此，避免各源各自猜测乱分。
+  const normalized = [...prmpt, ...lexica].map(normalizeItem);
+
   // 按 id 去重（PRMPT 优先，因更早抓取）
   const byId = new Map();
-  for (const p of [...prmpt, ...lexica]) {
+  for (const p of normalized) {
     if (!byId.has(p.id)) byId.set(p.id, p);
   }
   const all = [...byId.values()];

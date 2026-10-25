@@ -11,16 +11,17 @@ import { fetchJson, BROWSER_UA } from "../util.mjs";
 
 const API = "https://lexica.art/api/v1/search";
 
-// 检索词 → 摄影语言 / 标签 映射
+// 检索词 → 专业分类键（PRO_CATEGORIES 英文键）+ 核心风格键（CORE_STYLES）。
+// category 用英文键，与图集筛选行传值一致；中文标签已由归一层统一，旧中文写法已弃用。
 const QUERIES = [
-  { q: "cinematic portrait", style: "cinematic", category: "人像" },
-  { q: "minimalist architecture", style: "minimalist", category: "建筑" },
-  { q: "35mm film street photography", style: "film", category: "纪实" },
-  { q: "black and white portrait", style: "monochrome", category: "人像" },
-  { q: "macro nature close up", style: "macro", category: "自然" },
-  { q: "cyberpunk noir city", style: "noir", category: "夜景" },
-  { q: "fashion editorial", style: "portrait", category: "时尚" },
-  { q: "landscape fine art", style: "landscape", category: "风光" },
+  { q: "cinematic portrait", style: "cinematic", category: "portrait" },
+  { q: "minimalist architecture", style: "minimalist", category: "architectural" },
+  { q: "35mm film street photography", style: "film", category: "lifestyle" },
+  { q: "black and white portrait", style: "monochrome", category: "portrait" },
+  { q: "macro nature close up", style: "macro", category: "landscape" },
+  { q: "cyberpunk noir city", style: "noir", category: "cinematic" },
+  { q: "fashion editorial", style: "portrait", category: "fashion" },
+  { q: "landscape fine art", style: "landscape", category: "landscape" },
 ];
 
 /**
