@@ -79,33 +79,50 @@ export function inferStyle(text = "") {
   return "other";
 }
 
-// ── 采集 → 入库 之间的「整理 / 转换映射」层 ────────────────────────────
-// prmpt.it.com 有官方 12 分类（Browse by category + /category/<key> 页）。
-// 采集主路径即按官方分类页抓取，category 100% 用官方标注、零猜测；
-// 本层只做：同义词归一、历史中文脏数据兜底、style 派生。
+// ── 采集 → 入库 之间的「中间映射层」（多源统一）─────────────────────
+// 设计：每个数据源（prmpt / lexica / 未来新源）在 SOURCE_CATEGORY_MAPS
+// 里**独立声明**自己的「原始分类标签 → 统一分类键」映射；统一标准 =
+// prmpt.it.com 官方 12 类（用户确认权威，与 src/lib/types.ts PRO_CATEGORIES 一致）。
+// 加新源 = 在 SOURCE_CATEGORY_MAPS 加一个块，核心逻辑不动。
+// 原则：映射层只做「归一化」，绝不删除数据、绝不凭空猜测分类
+// （没有权威标注就不填，交由详情页 / 前端处理）。
 
-// 专业分类键集合 = prmpt.it.com 官方 12 类（与 src/lib/types.ts PRO_CATEGORIES 一致）。
+// 统一内部分类标准（基线）= prmpt.it.com 官方 12 类。
 export const KNOWN_CATEGORIES = new Set([
   "architectural", "artistic", "automotive", "beauty", "cinematic",
   "fashion", "landscape", "lifestyle", "lingerie", "portrait", "product", "romantic",
 ]);
 
-// 同义词 → 官方分类键（站点卡片上可能出现的变体标签）
-const CATEGORY_ALIASES = {
-  editorial: "fashion", streetwear: "fashion", street: "lifestyle",
-  nude: "lingerie", wedding: "romantic", travel: "lifestyle",
-  car: "automotive", building: "architectural", "fine-art": "artistic",
-  "fine art": "artistic",
-};
-
-// 中文标签 → 官方分类键（防御：采集器本应只产出英文标签，此处兜底历史/异常中文）
-const CATEGORY_CN = {
-  建筑: "architectural", 艺术: "artistic", 汽车: "automotive", 美: "beauty",
-  电影: "cinematic", 时尚: "fashion", 地貌: "landscape", 生活方式: "lifestyle",
-  内衣: "lingerie", 肖像: "portrait", 产品: "product", 浪漫主义: "romantic",
-  // 历史脏数据兼容（早期错误映射写入的中文）
-  人像: "portrait", 风光: "landscape", 浪漫: "romantic", 纪实: "lifestyle",
-  自然: "landscape", 夜景: "cinematic",
+// 每源独立的「原始分类标签 → 统一分类键」映射。
+// 每个块含：
+//   aliases  — 该源可能出现的「变体/同义词标签 → 统一键」（兜底页面上的非标准标签）
+//   cnLabels — 该源可能出现的「中文标签 → 统一键」（防御历史/异常中文）
+// 若该源有官方分类页（如 prmpt 的 /category/<key>），采集时直接产出官方 key，
+// 这里 aliases 仅兜底页面上的变体标签，不覆盖官方标注。
+export const SOURCE_CATEGORY_MAPS = {
+  prmpt: {
+    aliases: {
+      editorial: "fashion", streetwear: "fashion", street: "lifestyle",
+      nude: "lingerie", wedding: "romantic", travel: "lifestyle",
+      car: "automotive", building: "architectural", "fine-art": "artistic",
+      "fine art": "artistic",
+    },
+    cnLabels: {
+      建筑: "architectural", 艺术: "artistic", 汽车: "automotive", 美: "beauty",
+      电影: "cinematic", 时尚: "fashion", 地貌: "landscape", 生活方式: "lifestyle",
+      内衣: "lingerie", 肖像: "portrait", 产品: "product", 浪漫主义: "romantic",
+      // 历史脏数据兼容（早期错误映射写入的中文）
+      人像: "portrait", 风光: "landscape", 浪漫: "romantic", 纪实: "lifestyle",
+      自然: "landscape", 夜景: "cinematic",
+    },
+  },
+  lexica: {
+    // lexica 无官方分类；其 category 来自搜索 query 写死的 12 类之一，
+    // 已是统一标准，无需额外映射。若 lexica 改版出现新标签，在此补 aliases。
+    aliases: {},
+    cnLabels: {},
+  },
+  // 未来新源：在此加一个块，声明自己的原始标签 → 统一键映射即可。
 };
 
 // 官方分类 → 核心摄影语言（style）。仅作 promptText 无关键词时的兜底；
@@ -118,12 +135,19 @@ export const CATEGORY_TO_STYLE = {
   portrait: "portrait", product: "minimalist", romantic: "cinematic",
 };
 
-/** 站点原始分类标签 → 我们的专业分类键（英文）。未知则原样保留（并在 types.ts 补 PRO_CATEGORIES）。*/
-export function normalizeCategory(raw) {
+/**
+ * 站点原始分类标签 → 我们的统一分类键（按数据源选对应映射块）。
+ * - 先查该源的 cnLabels（中文兜底）→ aliases（同义词兜底）→ 已是统一标准则直接采用；
+ * - 都不中：原样保留原始标签（交由 types.ts 增补筛选行），**绝不猜、绝不删**。
+ * @param {string} source  数据源键（"prmpt" / "lexica" / 新源）
+ * @param {string} raw     原始分类标签
+ */
+export function normalizeCategory(source, raw) {
   if (!raw) return null;
   const k = String(raw).trim().toLowerCase();
-  if (CATEGORY_CN[k]) return CATEGORY_CN[k];
-  if (CATEGORY_ALIASES[k]) return CATEGORY_ALIASES[k];
+  const map = (source && SOURCE_CATEGORY_MAPS[source]) || { aliases: {}, cnLabels: {} };
+  if (map.cnLabels[k]) return map.cnLabels[k];
+  if (map.aliases[k]) return map.aliases[k];
   if (KNOWN_CATEGORIES.has(k)) return k;
   return k; // 未知分类保留，交由 types.ts 增补筛选行
 }
@@ -135,7 +159,7 @@ export function normalizeCategory(raw) {
  *   分类映射仅作无关键词时的兜底。杜绝「时尚题材硬是人像/电影感」。
  */
 export function normalizeItem(raw) {
-  const category = normalizeCategory(raw.category);
+  const category = normalizeCategory(raw.source, raw.category);
   const style =
     raw.style ||
     inferStyle(raw.promptText || "") ||
