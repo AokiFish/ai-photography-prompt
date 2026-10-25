@@ -57,36 +57,38 @@ export interface PromptFilters {
 export async function getPrompts(filters: PromptFilters = {}): Promise<Prompt[]> {
   const db = getDB();
   if (db) {
-    const where: string[] = [];
-    const vals: unknown[] = [];
-    if (filters.source) {
-      where.push("source = ?");
-      vals.push(filters.source);
-    }
-    if (filters.style) {
-      where.push("style = ?");
-      vals.push(filters.style);
-    }
-    if (filters.category) {
-      where.push("category = ?");
-      vals.push(filters.category);
-    }
-    if (filters.q) {
-      where.push("(prompt_text LIKE ? OR title LIKE ? OR category LIKE ?)");
-      vals.push(`%${filters.q}%`, `%${filters.q}%`, `%${filters.q}%`);
-    }
-    const sql =
-      "SELECT * FROM prompts" +
-      (where.length ? " WHERE " + where.join(" AND ") : "") +
-      " ORDER BY collected_at DESC";
-    const stmt = db.prepare(sql);
-    stmt.bind(...vals);
+    // 全量取出后在内存中去重 + 过滤：确保同一张图（同 image_url）只保留一条，
+    // 作为它的“主类别”归属，杜绝跨「核心 / 专业」筛选重复出现。
+    const stmt = db.prepare("SELECT * FROM prompts ORDER BY collected_at DESC");
     const { results } = await stmt.all<PromptRow>();
-    const rows = results.map(rowToPrompt);
-    return rows.length ? rows : SEED_PROMPTS.filter(applySeedFilter(filters));
+    const all = results.map(rowToPrompt);
+    if (all.length === 0) return SEED_PROMPTS.filter(applySeedFilter(filters));
+    const rows = dedupeByImage(all).filter(applySeedFilter(filters));
+    return rows.sort((a, b) => b.collectedAt - a.collectedAt);
   }
-  // 本地兜底
+  // 本地兜底（seed 为人工精排，保留全部，不去重以免合并不同提示词）
   return SEED_PROMPTS.filter(applySeedFilter(filters));
+}
+
+/**
+ * 按图去重：同一 image_url 只保留最早采集的一条（其 style/category 即主归属）。
+ * image_url 为空的行无法按图去重，按各自 id 保留。
+ * 目的：每张图只在一个主类别里出现，不跨「核心 / 专业」筛选重复。
+ */
+function dedupeByImage(rows: Prompt[]): Prompt[] {
+  const byImg = new Map<string, Prompt>();
+  const noImg: Prompt[] = [];
+  // 升序遍历：最早采集的一条作为该图的主记录
+  const sorted = [...rows].sort((a, b) => a.collectedAt - b.collectedAt);
+  for (const r of sorted) {
+    if (r.imageUrl) {
+      if (byImg.has(r.imageUrl)) continue;
+      byImg.set(r.imageUrl, r);
+    } else {
+      noImg.push(r);
+    }
+  }
+  return [...byImg.values(), ...noImg];
 }
 
 export async function getPrompt(id: string): Promise<Prompt | null> {

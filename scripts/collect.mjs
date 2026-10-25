@@ -43,13 +43,26 @@ async function main() {
   }
   const all = [...byId.values()];
 
+  // 按 image_url 去重，避免同一张图被多个检索词采集后归属多个分类 / 语言而重复入库。
+  // 同图保留最早采集（合并顺序 [...prmpt, ...lexica]，prmpt 优先）的一条作为主记录。
+  const byImg = new Map();
+  const noImg = [];
+  for (const p of all) {
+    if (p.imageUrl) {
+      if (!byImg.has(p.imageUrl)) byImg.set(p.imageUrl, p);
+    } else {
+      noImg.push(p);
+    }
+  }
+  const deduped = [...byImg.values(), ...noImg];
+
   console.log(
-    `✦ 采集完成：prmpt=${prmpt.length} lexica=${lexica.length} 去重后=${all.length} （${((Date.now() - t0) / 1000).toFixed(1)}s）`
+    `✦ 采集完成：prmpt=${prmpt.length} lexica=${lexica.length} 去重(按id)=${all.length} 去图=${deduped.length} （${((Date.now() - t0) / 1000).toFixed(1)}s）`
   );
 
   const sql =
     `-- 自动生成 @ ${new Date().toISOString()}\n` +
-    promptsToSql(all) +
+    promptsToSql(deduped) +
     "\n" +
     sourcesMetaToSql([
       { key: "prmpt", label: "PRMPT", status: prmpt.length ? "ok" : "partial", count: prmpt.length },
