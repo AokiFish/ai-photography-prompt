@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: collect-d1
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   collect:
