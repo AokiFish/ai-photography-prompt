@@ -60,9 +60,10 @@ export function PromptCard({ prompt, onOpen }: { prompt: Prompt; onOpen?: () => 
         )}
         {/* 卡片只显示「简短描述」（源站一句话陈述）。
             ⚠ 绝不在此铺 promptText：完整提示词长短悬殊（有的是 3000 字符 JSON），
-            会让瀑布流卡片高度失控、排版很丑。完整 prompt 只在详情页/弹窗/复制按钮里用。 */}
+            会让瀑布流卡片高度失控、排版很丑。完整 prompt 只在详情页/弹窗/复制按钮里用。
+            默认只给 2 行（line-clamp-2），用户明确不要更多。 */}
         {prompt.abstract && (
-          <p className="line-clamp-3" style={{ fontSize: 13, lineHeight: 1.75, color: "var(--paper-2)" }}>
+          <p className="line-clamp-2" style={{ fontSize: 13, lineHeight: 1.75, color: "var(--paper-2)" }}>
             {prompt.abstract}
           </p>
         )}
