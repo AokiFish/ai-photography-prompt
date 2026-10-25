@@ -86,18 +86,19 @@ export const CORE_STYLES: StyleKey[] = [
 // 与 prmpt.it.com 官方 Browse by category 完全一致（12 类，含 cinematic/portrait），
 // 采集时按 https://prmpt.it.com/category/<key> 分页抓取，分类零猜测。
 export const PRO_CATEGORIES: Record<string, string> = {
+  // 展示用中文标签（按用户口径调整过，勿改回）：beauty=美妆 / landscape=风景 / lifestyle=日常 / romantic=浪漫
   architectural: "建筑",
   artistic: "艺术",
   automotive: "汽车",
-  beauty: "美",
+  beauty: "美妆",
   cinematic: "电影",
   fashion: "时尚",
-  landscape: "地貌",
-  lifestyle: "生活方式",
+  landscape: "风景",
+  lifestyle: "日常",
   lingerie: "内衣",
   portrait: "肖像",
   product: "产品",
-  romantic: "浪漫主义",
+  romantic: "浪漫",
 };
 
 /**
