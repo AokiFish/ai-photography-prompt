@@ -14,5 +14,5 @@ pages_build_output_dir = ".vercel/output/static"
 [[d1_databases]]
 binding = "DB"
 database_name = "ai-photography-prompt"
-database_id = "46e8a1c621ca03e2dab903010fb5a2c6"
+database_id = "384fc693-8493-4b76-8660-4a7ff07c08ae"
 migrations_dir = "migrations"
