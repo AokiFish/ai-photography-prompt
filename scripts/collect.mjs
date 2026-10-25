@@ -18,6 +18,7 @@ import { execFileSync } from "node:child_process";
 
 import { collectPrmpt } from "./collect/sources/prmpt.mjs";
 import { collectLexica } from "./collect/sources/lexica.mjs";
+import { closeBrowser } from "./collect/browser.mjs";
 import { promptsToSql, sourcesMetaToSql, normalizeItem } from "./collect/util.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -99,7 +100,11 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error("✘ 采集器异常退出：", e);
-  process.exit(1);
-});
+main()
+  .catch((e) => {
+    console.error("✘ 采集器异常退出：", e);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await closeBrowser().catch(() => {});
+  });

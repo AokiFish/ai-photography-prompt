@@ -25,6 +25,13 @@ jobs:
         with:
           node-version: 22
 
+      # 0) 安装 Playwright + Chromium（lexica 需无头浏览器过 Cloudflare 质询）
+      #    --no-save 不污染仓库 package.json；仅 lexica 采集用到，本地无则自动回退。
+      - name: Install Playwright (Lexica 过 Cloudflare 用)
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
       # 1) 抓取两个源，生成 D1 的 INSERT SQL（落盘 .collect/collect.sql）
       #    采集器内置请求延迟，遵守目标站点的安全抓取间隔。
       - name: Scrape sources → SQL
