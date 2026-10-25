@@ -11,22 +11,16 @@ import { fetchText, KNOWN_CATEGORIES } from "../util.mjs";
 
 const BASE = "https://prmpt.it.com";
 
-// 从文本里识别分类标签（已知键 + 常见同义词）
-const CAT_RE = new RegExp(
-  "\\b(" +
-    [...KNOWN_CATEGORIES].join("|") +
-    "|editorial|streetwear|street|wedding|travel|car|building|fine[ -]?art)\\b",
-  "i"
-);
-
 function pick(re, html, group = 1) {
   const m = html.match(re);
   return m ? m[group].trim() : "";
 }
 
 // 解析列表页：优先 <a href="/prompt/..."> 卡片；否则从 __NEXT_DATA__ 取对象。
-// forceCategory：调用方传入页面级权威分类（/category/<key> 采集时用），
-// 传入后不再从卡片全文猜分类——官方页面标注优先，杜绝误判。
+// forceCategory：调用方传入页面级权威分类（/category/<key> 采集时用）。
+// **无权威分类时一律 siteCategory=null**——曾用 CAT_RE 从卡片全文扫描猜分类，
+// 导致提示词文本里出现 "artistic" 就被乱分到艺术类（用户强烈反对的“自作主张”）。
+// 兜底路径没有权威分类就不猜，交由详情页明确标注 / normalizeItem 处理。
 export function parseGalleryCards(html, forceCategory = null) {
   const cards = [];
   const seen = new Set();
@@ -40,13 +34,11 @@ export function parseGalleryCards(html, forceCategory = null) {
     const slug = href.replace(/^.*\/prompt\//, "").replace(/[?#].*$/, "");
     if (!slug || seen.has(slug)) continue;
     seen.add(slug);
-    const text = inner.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    const catM = text.match(CAT_RE);
     const imgM = inner.match(/<img[^>]+src=["']([^"']+)["']/i);
     cards.push({
       slug,
       sourceUrl: href.startsWith("http") ? href : BASE + href,
-      siteCategory: forceCategory ?? (catM ? catM[1].toLowerCase() : null),
+      siteCategory: forceCategory ?? null, // 无权威分类 = 不猜
       galleryImage: imgM ? imgM[1] : null,
     });
   }
@@ -81,7 +73,7 @@ export function parseGalleryCards(html, forceCategory = null) {
           cards.push({
             slug: slug || title,
             sourceUrl: slug ? BASE + "/prompt/" + slug : BASE,
-            siteCategory: cat ? cat.toLowerCase() : null,
+            siteCategory: forceCategory ?? (cat ? cat.toLowerCase() : null),
             galleryImage: img,
           });
         }
