@@ -14,13 +14,44 @@ export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * 带延迟的 GET（文本）。延迟用于尊重目标站点的安全抓取间隔。
  * headers 可覆盖/追加默认请求头（如 lexica 需浏览器 UA + Referer）。
  */
-export async function fetchText(url, { delay = 1500, accept = "text/html,application/json", headers = {} } = {}) {
+export async function fetchText(
+  url,
+  { delay = 1500, accept = "text/html,application/json", headers = {}, retries = 3, backoff = 1500 } = {}
+) {
   await sleep(delay);
-  const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT, Accept: accept, ...headers },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status} @ ${url}`);
-  return res.text();
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT, Accept: accept, ...headers },
+      });
+      if (res.ok) return res.text();
+      // 明确无资源：不再重试，立即放弃（避免无谓等待）
+      if (res.status === 404 || res.status === 403 || res.status === 401) {
+        const err = new Error(`HTTP ${res.status} @ ${url}`);
+        err.noRetry = true;
+        throw err;
+      }
+      lastErr = new Error(`HTTP ${res.status} @ ${url}`);
+      // 429 限流：尊重 Retry-After 头，否则按指数退避
+      if (res.status === 429) {
+        const ra = res.headers.get("retry-after");
+        const wait = ra ? Number(ra) * 1000 : backoff * (attempt + 1);
+        console.warn(`[fetch] 429 限流，退避 ${Math.round(wait)}ms 后重试 (${attempt + 1}/${retries})`);
+        await sleep(wait);
+        continue;
+      }
+      // 5xx / 其他可重试错误：指数退避
+      console.warn(`[fetch] HTTP ${res.status}，退避 ${backoff * (attempt + 1)}ms 后重试 (${attempt + 1}/${retries})`);
+      await sleep(backoff * (attempt + 1));
+      continue;
+    } catch (e) {
+      lastErr = e;
+      if (e.noRetry || attempt >= retries) break;
+      await sleep(backoff * (attempt + 1));
+    }
+  }
+  throw lastErr ?? new Error(`HTTP 失败 @ ${url}`);
 }
 
 export async function fetchJson(url, opts) {
