@@ -2154,5 +2154,61 @@
     "imageUrl": "https://storage.googleapis.com/prmpt-58b35.firebasestorage.app/prompts/walk-of-fame-golden-hour-portrait.webp",
     "tags": [],
     "collectedAt": 1792932210451
+  },
+  {
+    "id": "prmpt:gokova-golden-hour-splash",
+    "source": "prmpt",
+    "sourceUrl": "https://prmpt.it.com/prompt/gokova-golden-hour-splash",
+    "title": "Gokova Bay - Golden Hour Splash — AI Photo Prompt · PRMPT",
+    "promptText": "Golden hour water splash between couple at Akyaka-Gokova shoreline. Perfect for romantic summer content, playful couples photography, and golden hour editorials.",
+    "negativePrompt": null,
+    "category": "romantic",
+    "style": "portrait",
+    "model": null,
+    "imageUrl": "https://storage.googleapis.com/prmpt-58b35.firebasestorage.app/prompts/gokova-golden-hour-splash.webp",
+    "tags": [],
+    "collectedAt": 1792932314822
+  },
+  {
+    "id": "prmpt:gokova-midday-water-kiss",
+    "source": "prmpt",
+    "sourceUrl": "https://prmpt.it.com/prompt/gokova-midday-water-kiss",
+    "title": "Gokova Bay - Midday Water Kiss — AI Photo Prompt · PRMPT",
+    "promptText": "Gentle midday kiss in turquoise water at Akyaka-Gokova. Perfect for romantic summer content, couples photography, and Mediterranean love stories.",
+    "negativePrompt": null,
+    "category": "romantic",
+    "style": "other",
+    "model": null,
+    "imageUrl": "https://storage.googleapis.com/prmpt-58b35.firebasestorage.app/prompts/gokova-midday-water-kiss.webp",
+    "tags": [],
+    "collectedAt": 1792932316402
+  },
+  {
+    "id": "prmpt:gokova-turquoise-swim-romance",
+    "source": "prmpt",
+    "sourceUrl": "https://prmpt.it.com/prompt/gokova-turquoise-swim-romance",
+    "title": "Gokova Bay - Turquoise Swim — AI Photo Prompt · PRMPT",
+    "promptText": "Intimate couple swimming in crystal turquoise water at Gokova Bay. Perfect for romantic travel content, couples photography, and Mediterranean summer campaigns.",
+    "negativePrompt": null,
+    "category": "romantic",
+    "style": "other",
+    "model": null,
+    "imageUrl": "https://storage.googleapis.com/prmpt-58b35.firebasestorage.app/prompts/gokova-turquoise-swim-romance.webp",
+    "tags": [],
+    "collectedAt": 1792932317954
+  },
+  {
+    "id": "prmpt:mugla-beach-close-up-romance",
+    "source": "prmpt",
+    "sourceUrl": "https://prmpt.it.com/prompt/mugla-beach-close-up-romance",
+    "title": "Mugla Beach - Close Up Romance — AI Photo Prompt · PRMPT",
+    "promptText": "Intimate close-up of couple on wet sand at Mugla coast. Perfect for romantic couples content, beach love stories, and intimate travel photography.",
+    "negativePrompt": null,
+    "category": "romantic",
+    "style": "macro",
+    "model": null,
+    "imageUrl": "https://storage.googleapis.com/prmpt-58b35.firebasestorage.app/prompts/mugla-beach-close-up-romance.webp",
+    "tags": [],
+    "collectedAt": 1792932319505
   }
 ]
