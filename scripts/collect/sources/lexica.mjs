@@ -7,7 +7,7 @@
 // 若端点/字段有变动，解析会失败并被下方 try/catch 吞掉（打印警告、跳过该查询），
 // 不会中断整个工作流。请上线后按一次真实响应微调映射。
 
-import { fetchJson, USER_AGENT } from "../util.mjs";
+import { fetchJson, BROWSER_UA } from "../util.mjs";
 
 const API = "https://lexica.art/api/v1/search";
 
@@ -28,8 +28,10 @@ const QUERIES = [
  * @param {number} opts.perQuery 每个检索词最多采集条数
  * @param {number} opts.delay    请求间隔(ms)，遵守安全抓取间隔
  */
-export async function collectLexica({ perQuery = 8, delay = 1500 } = {}) {
+export async function collectLexica({ perQuery = 8, delay = 3000 } = {}) {
   const results = [];
+  // lexica 对 bot UA 返回 500/429，必须用浏览器 UA + Referer 绕过。
+  const headers = { "User-Agent": BROWSER_UA, Referer: "https://lexica.art/" };
   for (const { q, style, category } of QUERIES) {
     let cursor = 0;
     let fetched = 0;
@@ -38,7 +40,7 @@ export async function collectLexica({ perQuery = 8, delay = 1500 } = {}) {
         const url = `${API}?q=${encodeURIComponent(q)}&cursor=${cursor}`;
         let data;
         try {
-          data = await fetchJson(url, { delay, accept: "application/json" });
+          data = await fetchJson(url, { delay, accept: "application/json", headers });
         } catch (e) {
           console.warn(`[lexica] 查询 "${q}" 请求失败（跳过）: ${e.message}`);
           break;
@@ -80,5 +82,4 @@ export async function collectLexica({ perQuery = 8, delay = 1500 } = {}) {
   return results;
 }
 
-// 保留 USER_AGENT 引用，避免未使用告警（fetchJson 内部已用）
-void USER_AGENT;
+// lexica 请求头已改用 BROWSER_UA（util.mjs 导出），见 collectLexica 内 headers。

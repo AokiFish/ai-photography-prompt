@@ -4,15 +4,20 @@
 export const USER_AGENT =
   "Mozilla/5.0 (compatible; AIPhotographyPromptBot/1.0; +https://github.com/ai-photography-prompt)";
 
+// 模拟真实浏览器的 UA，绕过部分站点对 bot UA 的 WAF/限流（返回 500/429）。
+export const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * 带延迟的 GET（文本）。延迟用于尊重目标站点的安全抓取间隔。
+ * headers 可覆盖/追加默认请求头（如 lexica 需浏览器 UA + Referer）。
  */
-export async function fetchText(url, { delay = 1500, accept = "text/html,application/json" } = {}) {
+export async function fetchText(url, { delay = 1500, accept = "text/html,application/json", headers = {} } = {}) {
   await sleep(delay);
   const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT, Accept: accept },
+    headers: { "User-Agent": USER_AGENT, Accept: accept, ...headers },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} @ ${url}`);
   return res.text();
@@ -37,7 +42,7 @@ const STYLE_KEYWORDS = [
 /** 从文本启发式推断摄影语言分类。 */
 export function inferStyle(text = "") {
   const t = text.toLowerCase();
-  for (const [style, keys] of STYLE_KEYWORDS) {
+  for (const [style, ...keys] of STYLE_KEYWORDS) {
     if (keys.some((k) => t.includes(k))) return style;
   }
   return "other";
