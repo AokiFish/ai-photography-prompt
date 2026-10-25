@@ -69,7 +69,7 @@ async function main() {
     try {
       execFileSync(
         "npx",
-        ["wrangler", "d1", "execute", "DB", "--remote", `--file=${sqlPath}`],
+        ["wrangler", "d1", "execute", "ai-photography-prompt", "--remote", `--file=${sqlPath}`],
         { cwd: ROOT, stdio: "inherit", env: process.env }
       );
       console.log("✔ D1 写入成功");
