@@ -97,33 +97,34 @@ export const PRO_CATEGORIES: Record<string, string> = {
   romantic: "浪漫主义",
 };
 
-const SOURCE_ROOTS: Record<string, string> = {
-  prmpt: "https://prmpt.it.com",
-  lexica: "https://lexica.art",
-};
-
-function isRootUrl(url: string, root: string): boolean {
-  return url.replace(/\/+$/, "") === root;
-}
+/**
+ * 「打开完整网页」允许的外链白名单：只认两个源的**详情内页**。
+ * 域名 + /prompt/<slug> 路径都匹配才放行——从机制上保证永远不会再跳：
+ * 源站首页、其它域名、站内死链、占位 URL。匹配不了一律返回 null（隐藏按钮）。
+ */
+const DETAIL_URL_RE = /^https:\/\/(prmpt\.it\.com|lexica\.art)\/prompt\/[^/\s]+$/;
 
 /**
  * 解析「打开完整网页」应跳转的**真实内页** URL。
- * - 采集记录优先用 source_url（详情页 URL）；
- * - source_url 缺失或为站点根（早期首页兜底脏数据）时，若 id 形如
- *   `<source>:<slug>` 且非首页兜底（`home:` 前缀），按站点规则拼出详情页；
- * - 确实找不到真实内页 → 返回 null，调用方应**隐藏按钮**，
- *   而不是给一个指向源站首页的错误链接。
+ * - 采集记录优先用 source_url（详情页 URL），但必须过白名单校验；
+ * - source_url 缺失/为站点根/不在白名单时，若 id 形如 `<source>:<slug>`
+ *   且非首页兜底（`home:` 前缀），按站点规则拼出详情页再校验；
+ * - 都不通过 → 返回 null，调用方应**隐藏按钮**，
+ *   而不是给一个指向源站首页或站外死链的错误链接。
  */
 export function resolveDetailUrl(
   p: Pick<Prompt, "id" | "source" | "sourceUrl">
 ): string | null {
-  const root = SOURCE_ROOTS[p.source];
-  if (p.sourceUrl && (!root || !isRootUrl(p.sourceUrl, root))) return p.sourceUrl;
+  if (p.sourceUrl && DETAIL_URL_RE.test(p.sourceUrl)) return p.sourceUrl;
   const slug = /^[a-z]+:(.+)$/.exec(p.id)?.[1];
-  if (!slug || slug.startsWith("home:")) return null;
-  if (p.source === "prmpt") return `https://prmpt.it.com/prompt/${slug}`;
-  if (p.source === "lexica") return `https://lexica.art/prompt/${slug}`;
-  return null;
+  if (!slug || slug.startsWith("home:") || /[/\s]/.test(slug)) return null;
+  const candidate =
+    p.source === "prmpt"
+      ? `https://prmpt.it.com/prompt/${slug}`
+      : p.source === "lexica"
+        ? `https://lexica.art/prompt/${slug}`
+        : null;
+  return candidate && DETAIL_URL_RE.test(candidate) ? candidate : null;
 }
 
 // 弹窗里的「类型介绍」——每种摄影语言的简要说明（编辑式口吻）。

@@ -44,3 +44,7 @@ jobs:
           npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --file=.d1-cleanup.sql
           # 1) 再把仓库数据集刷进 D1（INSERT OR REPLACE：覆盖同 id、追加新 id）
           npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --file=data/prompts.sql
+          # 2) 验证：打印总数 + 脏 URL 数（source_url 不含 /prompt/ 的记录）。
+          #    正常应为 bad_url=0；若 >0 说明数据集混入了首页兜底产物，需检查采集路径。
+          npx --yes wrangler@latest d1 execute ai-photography-prompt --remote \
+            --command "SELECT COUNT(*) AS total, SUM(CASE WHEN source_url IS NULL OR source_url NOT LIKE '%/prompt/%' THEN 1 ELSE 0 END) AS bad_url FROM prompts;"
