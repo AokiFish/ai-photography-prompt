@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   设计令牌 — 沿用 demo 的暗色编辑杂志语言
+   ============================================================ */
+:root {
+  --font-serif: "Newsreader", "Songti SC", "SimSun", serif;
+  --font-sans: "Space Grotesk", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "Space Mono", ui-monospace, monospace;
+  --ink: #141414;
+  --ink-2: #1b1b1b;
+  --ink-3: #232323;
+  --paper: #ede7da;
+  --paper-2: #e2dac8;
+  --accent: #c89b4a;
+  --accent-soft: rgba(200, 155, 74, 0.16);
+  --line: rgba(237, 231, 218, 0.14);
+  --line-strong: rgba(237, 231, 218, 0.26);
+  --muted: rgba(237, 231, 218, 0.6);
+  --faint: rgba(237, 231, 218, 0.34);
+  --pad: clamp(20px, 5vw, 72px);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--ink);
+}
+
+body {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-sans), "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-weight: 340;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--accent);
+  color: #141414;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* 细滚动条 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--ink);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+  border: 3px solid var(--ink);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* ============================================================
+   颗粒质感（固定叠层）
+   ============================================================ */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stittip'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   排版工具类
+   ============================================================ */
+.mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.serif {
+  font-family: var(--font-serif), "Songti SC", "SimSun", serif;
+}
+.display {
+  font-family: var(--font-serif), "Songti SC", "SimSun", serif;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.pad-x {
+  padding-left: var(--pad);
+  padding-right: var(--pad);
+}
+
+/* 章节小标：左标签 + 右细线 */
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.kicker .lbl {
+  color: var(--accent);
+}
+.kicker .rule {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* 通用分隔线 */
+.hairline {
+  border-top: 1px solid var(--line);
+}
+
+/* ============================================================
+   滚动揭示动效（IntersectionObserver 触发 .is-visible）
+   ============================================================ */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+.reveal[data-delay="1"] {
+  transition-delay: 0.08s;
+}
+.reveal[data-delay="2"] {
+  transition-delay: 0.16s;
+}
+.reveal[data-delay="3"] {
+  transition-delay: 0.24s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* 复制按钮反馈 */
+.copy.done {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #141414;
+}

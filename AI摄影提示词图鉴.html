@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 摄影提示词图鉴 · THE PROMPT PHOTOGRAPH</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23141414'/%3E%3Ccircle cx='32' cy='32' r='16' fill='none' stroke='%23C89B4A' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23EDE7DA'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://miaoda.feishu.cn" crossorigin>
+<link href="https://miaoda.feishu.cn/fonts/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#141414;
+  --ink-2:#1B1B1B;
+  --ink-3:#232323;
+  --paper:#EDE7DA;
+  --paper-2:#E2DAC8;
+  --muted:rgba(237,231,218,.60);
+  --faint:rgba(237,231,218,.34);
+  --accent:#C89B4A;
+  --accent-soft:rgba(200,155,74,.16);
+  --line:rgba(237,231,218,.14);
+  --line-strong:rgba(237,231,218,.26);
+  --pad:clamp(20px,5vw,72px);
+  --serif:"Newsreader","Songti SC","SimSun",serif;
+  --sans:"Space Grotesk","PingFang SC","Microsoft YaHei",sans-serif;
+  --mono:"Space Mono",ui-monospace,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{background:var(--ink);color:var(--paper);font-family:var(--sans);font-weight:340;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:var(--accent);color:#141414}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.mono{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.serif{font-family:var(--serif)}
+
+/* grain overlay */
+.grain{position:fixed;inset:0;z-index:400;pointer-events:none;opacity:.045;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ===== MASTHEAD ===== */
+.masthead{position:relative;padding:clamp(70px,12vh,120px) var(--pad) clamp(48px,8vh,90px);border-bottom:1px solid var(--line)}
+.masthead .kicker{display:flex;align-items:center;gap:16px;margin-bottom:clamp(28px,5vh,48px)}
+.masthead .kicker .vol{color:var(--accent)}
+.masthead .kicker .rule{flex:1;height:1px;background:var(--line)}
+.masthead h1{font-family:var(--serif);font-weight:500;font-size:clamp(44px,10vw,120px);line-height:1.0;letter-spacing:-.01em}
+.masthead h1 .en{display:block;font-size:.34em;letter-spacing:.14em;font-family:var(--sans);font-weight:400;color:var(--muted);margin-top:18px;text-transform:uppercase}
+.masthead .lede{max-width:36em;margin-top:clamp(30px,6vh,56px);font-size:clamp(15px,1.9vw,18px);color:var(--paper);line-height:1.9}
+.masthead .lede b{font-weight:600;color:var(--accent)}
+.masthead .lede p+p{margin-top:14px;color:var(--muted);font-size:.92em}
+.masthead .meta{display:flex;flex-wrap:wrap;gap:14px 40px;margin-top:clamp(34px,6vh,54px);padding-top:22px;border-top:1px solid var(--line)}
+.masthead .meta .m{display:flex;flex-direction:column;gap:5px}
+.masthead .meta .m .k{font-size:10px;letter-spacing:.18em;color:var(--faint);text-transform:uppercase}
+.masthead .meta .m .v{font-family:var(--mono);font-size:13px;color:var(--paper-2)}
+
+/* ===== INDEX (small) ===== */
+.index{border-bottom:1px solid var(--line);padding:0 var(--pad)}
+.index .row{display:flex;flex-wrap:wrap;gap:6px 18px;padding:16px 0}
+.index a{font-size:12px;color:var(--muted);letter-spacing:.02em;display:inline-flex;gap:8px;align-items:baseline;border-bottom:1px solid transparent;padding-bottom:2px}
+.index a:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.index a .n{font-family:var(--mono);color:var(--faint);font-size:10px}
+
+/* ===== PLATE ===== */
+.plate{display:grid;grid-template-columns:1fr;gap:0;border-bottom:1px solid var(--line)}
+.plate .frame{position:relative;overflow:hidden;background:var(--ink-2)}
+.plate .frame img{width:100%;height:100%;object-fit:cover;display:block}
+.plate .frame .aspect{aspect-ratio:4/5}
+.plate .frame .cap{position:absolute;left:14px;bottom:12px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:rgba(237,231,218,.7);background:rgba(20,20,20,.55);padding:5px 10px;border-radius:3px;backdrop-filter:blur(3px)}
+.plate .label{padding:clamp(28px,4vw,52px) var(--pad);background:var(--ink-2);display:flex;flex-direction:column;gap:22px}
+.plate .label .head{display:flex;align-items:flex-start;gap:20px}
+.plate .label .num{font-family:var(--serif);font-size:clamp(34px,4.5vw,54px);font-weight:500;color:var(--accent);line-height:1;min-width:1.4em}
+.plate .label .title h2{font-family:var(--serif);font-weight:500;font-size:clamp(30px,4vw,46px);line-height:1.05;letter-spacing:-.01em}
+.plate .label .title .en{display:block;font-family:var(--sans);font-weight:400;font-size:.42em;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.plate .label .tag{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;border:1px solid var(--line-strong);padding:5px 12px;border-radius:100px;font-size:11px;color:var(--paper-2)}
+.plate .label .tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.plate .label .desc{font-size:clamp(14px,1.6vw,16px);color:var(--paper);line-height:1.85;max-width:44em}
+.plate .label .prompts{display:flex;flex-direction:column;gap:20px}
+.plate .block{display:flex;flex-direction:column;gap:10px}
+.plate .block .blabel{display:flex;align-items:center;gap:12px;font-size:11px;letter-spacing:.16em;color:var(--accent);text-transform:uppercase;font-family:var(--mono)}
+.plate .block .blabel::after{content:"";flex:1;height:1px;background:var(--line)}
+.plate .block.core .txt{border-left:2px solid var(--accent);padding:6px 0 6px 16px;font-family:var(--mono);font-size:clamp(12.5px,1.4vw,14.5px);line-height:1.75;color:var(--paper-2)}
+.plate .block.full .box{position:relative;border:1px solid var(--line);border-radius:8px;padding:18px 54px 18px 18px;background:var(--ink-3)}
+.plate .block.full .box pre{white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:clamp(12px,1.3vw,13.5px);line-height:1.8;color:var(--paper)}
+.plate .copy{position:absolute;top:12px;right:12px;display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid var(--line-strong);border-radius:6px;background:transparent;color:var(--paper-2);font-family:var(--mono);font-size:11px;letter-spacing:.08em;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.plate .copy:hover{background:var(--accent);border-color:var(--accent);color:#141414}
+.plate .copy.done{background:var(--accent);border-color:var(--accent);color:#141414}
+.plate .copy svg{width:14px;height:14px}
+.plate .exif{display:flex;flex-wrap:wrap;gap:8px 26px;padding-top:18px;border-top:1px solid var(--line)}
+.plate .exif .e{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.plate .exif .e::before{content:"·";color:var(--accent)}
+
+@media(min-width:880px){
+  .plate{grid-template-columns:0.92fr 1.08fr}
+  .plate.rev .frame{order:2}
+  .plate.rev .label{order:1}
+  .plate .frame{min-height:100%}
+  .plate .frame .aspect{height:100%}
+  .plate .label{border-left:1px solid var(--line);padding:clamp(44px,5vw,72px) clamp(32px,4vw,64px)}
+  .plate.rev .label{border-left:none;border-right:1px solid var(--line)}
+}
+
+/* ===== RECIPE ===== */
+.recipe{padding:clamp(70px,11vh,120px) var(--pad);border-bottom:1px solid var(--line)}
+.recipe .kicker{display:flex;align-items:center;gap:16px;margin-bottom:clamp(26px,4vh,44px)}
+.recipe .kicker .lbl{color:var(--accent)}
+.recipe .kicker .rule{flex:1;height:1px;background:var(--line)}
+.recipe h2{font-family:var(--serif);font-weight:500;font-size:clamp(32px,5vw,60px);line-height:1.05;letter-spacing:-.01em;margin-bottom:18px}
+.recipe .sub{max-width:40em;color:var(--muted);font-size:15px;line-height:1.8;margin-bottom:clamp(34px,6vh,54px)}
+.recipe .grid{display:grid;grid-template-columns:1fr;gap:1px;background:var(--line)}
+.recipe .ing{background:var(--ink);padding:clamp(20px,3vw,30px)}
+.recipe .ing .i{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.recipe .ing .i .n{font-family:var(--mono);color:var(--accent);font-size:12px}
+.recipe .ing .i .t{font-family:var(--serif);font-weight:500;font-size:20px}
+.recipe .ing .ex{font-family:var(--mono);font-size:12.5px;color:var(--paper-2);line-height:1.7;border-left:1px solid var(--line-strong);padding-left:14px;margin-top:4px}
+.recipe .ing .note{font-size:13px;color:var(--muted);line-height:1.75;margin-top:10px}
+@media(min-width:760px){.recipe .grid{grid-template-columns:1fr 1fr}}
+
+/* ===== FOOTER ===== */
+.footer{padding:clamp(48px,8vh,80px) var(--pad) 34px;background:var(--ink)}
+.footer .top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:20px;padding-bottom:40px}
+.footer .top .t{font-family:var(--serif);font-weight:500;font-size:clamp(28px,4vw,44px);line-height:1.05}
+.footer .top .t .en{display:block;font-family:var(--sans);font-size:.4em;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-top:8px;font-weight:400}
+.footer .bottom{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;padding-top:22px;border-top:1px solid var(--line);font-size:11px;color:var(--faint)}
+.footer .bottom .r{color:var(--muted)}
+.footer .bottom a{color:var(--muted);border-bottom:1px solid var(--line-strong)}
+.footer .bottom a:hover{color:var(--accent);border-bottom-color:var(--accent)}
+
+#toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:500;background:var(--accent);color:#141414;padding:11px 22px;border-radius:6px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;opacity:0;transition:opacity .2s}
+#toast.show{opacity:1}
+
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ===== 页眉 ===== -->
+<header class="masthead" id="top">
+  <div class="kicker mono">
+    <span class="vol">VOL.01</span>
+    <span>暗房 · 画廊 · 提示词图鉴</span>
+    <span class="rule"></span>
+    <span>AI PHOTOGRAPHY</span>
+  </div>
+  <h1>AI 摄影<br>提示词图鉴<span class="en">The Prompt Photograph · 一册可以照着拍的提示词集</span></h1>
+  <div class="lede">
+    <p>不是教你怎么念咒语，而是带你在<b>六种摄影语言</b>之间穿行——电影感、极简、胶片、黑白、微距、夜影。每种风格配一张出图示例、一句核心提示词，以及可直接复制的完整提示词。</p>
+    <p>把「想拍什么」翻译成 AI 听得懂的句子，是这时代的新摄影术。本册即为此而作：主体、光线、镜头、色彩、质感——五大配方，逐一对号入座。</p>
+  </div>
+  <div class="meta">
+    <div class="m"><span class="k">Type · 类型</span><span class="v">提示词图鉴 / Prompt Catalogue</span></div>
+    <div class="m"><span class="k">Plates · 收录</span><span class="v">06 种摄影风格</span></div>
+    <div class="m"><span class="k">Format · 画幅</span><span class="v">4:5 · 竖幅</span></div>
+    <div class="m"><span class="k">Ratio · 出图</span><span class="v">1831 × 2289</span></div>
+  </div>
+</header>
+
+<!-- ===== 索引 ===== -->
+<nav class="index mono" aria-label="目录">
+  <div class="row">
+    <a href="#p1"><span class="n">01</span>电影感 Cinematic</a>
+    <a href="#p2"><span class="n">02</span>极简 Minimalist</a>
+    <a href="#p3"><span class="n">03</span>胶片 Film</a>
+    <a href="#p4"><span class="n">04</span>黑白 Monochrome</a>
+    <a href="#p5"><span class="n">05</span>微距 Macro</a>
+    <a href="#p6"><span class="n">06</span>夜影 Noir</a>
+    <a href="#recipe"><span class="n">配方</span>提示词拆解</a>
+  </div>
+</nav>
+
+<!-- ===== 图鉴 · 01 电影感 ===== -->
+<article class="plate" id="p1">
+  <div class="frame">
+    <div class="aspect">
+      <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/NHMLbPdhSoSUbnxJ3C9cS65gncn" alt="电影感示例图：雨夜街道中撑伞的行人剪影" loading="lazy">
+    </div>
+    <span class="cap">PLATE 01 · CINEMATIC</span>
+  </div>
+  <div class="label">
+    <div class="head">
+      <div class="num">01</div>
+      <div class="title"><h2>电影感<span class="en">Cinematic</span></h2></div>
+    </div>
+    <span class="tag mono">叙事 · 氛围 · 影调</span>
+    <p class="desc">像电影剧照般的画面，靠光线、影调与纵深讲故事。适合需要情绪与氛围的叙事性内容——雨夜、黄昏、孤独剪影。关键词落在「电影感」与「影调」上，让 AI 往银幕而非快照的方向走。</p>
+    <div class="prompts">
+      <div class="block core">
+        <span class="blabel">核心提示词 · Core</span>
+        <div class="txt">cinematic film still, shallow depth of field, teal-orange grade, anamorphic, moody atmosphere</div>
+      </div>
+      <div class="block full">
+        <span class="blabel">完整提示词 · Full</span>
+        <div class="box">
+          <button class="copy" data-target="p1full" aria-label="复制完整提示词">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            <span>复制</span>
+          </button>
+          <pre id="p1full">Cinematic film still: a lone figure crossing a rain-soaked city street at dusk, warm amber streetlights reflecting on wet asphalt, deep shadows, volumetric haze, subtle anamorphic lens flare, shallow depth of field, moody teal-orange color grade, fine 35mm film grain, high-end cinematography, award-winning composition</pre>
+        </div>
+      </div>
+    </div>
+    <div class="exif mono">
+      <span class="e">35mm</span><span class="e">f/1.8</span><span class="e">teal-orange</span><span class="e">mood</span>
+    </div>
+  </div>
+</article>
+
+<!-- ===== 02 极简 ===== -->
+<article class="plate rev" id="p2">
+  <div class="frame">
+    <div class="aspect">
+      <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/Zh9AbuEzAogq5cxMLYkcXsQYnNN" alt="极简主义示例图：米色背景上的白色瓷球" loading="lazy">
+    </div>
+    <span class="cap">PLATE 02 · MINIMALIST</span>
+  </div>
+  <div class="label">
+    <div class="head">
+      <div class="num">02</div>
+      <div class="title"><h2>极简<span class="en">Minimalist</span></h2></div>
+    </div>
+    <span class="tag mono">克制 · 留白 · 秩序</span>
+    <p class="desc">单一主体置于大面留白，构图精准，色彩收敛——追求「少即是多」。适合产品、静物与需要高级秩序感的画面。重点给出「留白」「单一主体」「柔和光」这三个锚点，画面自然安静下来。</p>
+    <div class="prompts">
+      <div class="block core">
+        <span class="blabel">核心提示词 · Core</span>
+        <div class="txt">minimalist, single subject, negative space, soft diffused light, muted palette, precise composition</div>
+      </div>
+      <div class="block full">
+        <span class="blabel">完整提示词 · Full</span>
+        <div class="box">
+          <button class="copy" data-target="p2full" aria-label="复制完整提示词">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            <span>复制</span>
+          </button>
+          <pre id="p2full">Minimalist fine art photography: a single white ceramic sphere on a warm beige seamless background, soft diffused studio lighting, one gentle long shadow, generous negative space, precise geometric composition, muted earthy palette, editorial, ultra clean</pre>
+        </div>
+      </div>
+    </div>
+    <div class="exif mono">
+      <span class="e">studio</span><span class="e">softbox</span><span class="e">beige</span><span class="e">negative space</span>
+    </div>
+  </div>
+</article>
+
+<!-- ===== 03 胶片 ===== -->
+<article class="plate" id="p3">
+  <div class="frame">
+    <div class="aspect">
+      <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/SwUbbT9v6o0bPcxDoJZc8pkpnAq" alt="胶片感示例图：旧城小巷的随拍街景" loading="lazy">
+    </div>
+    <span class="cap">PLATE 03 · FILM</span>
+  </div>
+  <div class="label">
+    <div class="head">
+      <div class="num">03</div>
+      <div class="title"><h2>胶片感<span class="en">Film</span></h2></div>
+    </div>
+    <span class="tag mono">颗粒 · 怀旧 · 纪实</span>
+    <p class="desc">复古胶片的色彩与颗粒，带着温度的「不完美」。适合纪实、街拍、怀旧叙事。直接点名胶片型号（如 kodak gold）与「颗粒」「漏光」这类胶片特有瑕疵，是让画面脱离数码感的捷径。</p>
+    <div class="prompts">
+      <div class="block core">
+        <span class="blabel">核心提示词 · Core</span>
+        <div class="txt">35mm film, kodak tones, film grain, light leak, nostalgic, documentary</div>
+      </div>
+      <div class="block full">
+        <span class="blabel">完整提示词 · Full</span>
+        <div class="box">
+          <button class="copy" data-target="p3full" aria-label="复制完整提示词">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            <span>复制</span>
+          </button>
+          <pre id="p3full">Vintage 35mm film photograph: candid street scene in a quiet old town alley, faded kodak gold tones, pronounced film grain, slight warm light leak on the edge, nostalgic color, natural soft light, documentary style, imperfect and authentic</pre>
+        </div>
+      </div>
+    </div>
+    <div class="exif mono">
+      <span class="e">kodak gold</span><span class="e">35mm</span><span class="e">grain</span><span class="e">candid</span>
+    </div>
+  </div>
+</article>
+
+<!-- ===== 04 黑白 ===== -->
+<article class="plate rev" id="p4">
+  <div class="frame">
+    <div class="aspect">
+      <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/JmcbbPascoFOK8x7uLecgRIQnee" alt="黑白艺术示例图：明暗对比强烈的女性肖像" loading="lazy">
+    </div>
+    <span class="cap">PLATE 04 · MONOCHROME</span>
+  </div>
+  <div class="label">
+    <div class="head">
+      <div class="num">04</div>
+      <div class="title"><h2>黑白艺术<span class="en">Monochrome</span></h2></div>
+    </div>
+    <span class="tag mono">光影 · 对比 · 经典</span>
+    <p class="desc">剥离色彩，只剩光影的骨骼。高对比的明暗分层让情绪有了重量。适合人像、肖像与追求「经典感」的画面。关键词「明暗对照 chiaroscuro」与「高对比」是黑白出彩的灵魂。</p>
+    <div class="prompts">
+      <div class="block core">
+        <span class="blabel">核心提示词 · Core</span>
+        <div class="txt">black and white, chiaroscuro, high contrast, dramatic lighting, fine art portrait</div>
+      </div>
+      <div class="block full">
+        <span class="blabel">完整提示词 · Full</span>
+        <div class="box">
+          <button class="copy" data-target="p4full" aria-label="复制完整提示词">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            <span>复制</span>
+          </button>
+          <pre id="p4full">High-contrast black and white fine art portrait: dramatic chiaroscuro lighting on a woman's face half in shadow, textured skin and fabric detail, deep blacks and bright highlights, timeless classical composition, large format film look, expressive, gallery quality</pre>
+        </div>
+      </div>
+    </div>
+    <div class="exif mono">
+      <span class="e">B&amp;W</span><span class="e">large format</span><span class="e">chiaroscuro</span><span class="e">gallery</span>
+    </div>
+  </div>
+</article>
+
+<!-- ===== 05 微距 ===== -->
+<article class="plate" id="p5">
+  <div class="frame">
+    <div class="aspect">
+      <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/OcE0bIxcdoRO2KxDiUCctaI0nJc" alt="自然微距示例图：叶尖折射晨光的水珠" loading="lazy">
+    </div>
+    <span class="cap">PLATE 05 · MACRO</span>
+  </div>
+  <div class="label">
+    <div class="head">
+      <div class="num">05</div>
+      <div class="title"><h2>自然微距<span class="en">Macro</span></h2></div>
+    </div>
+    <span class="tag mono">细节 · 虚化 · 生机</span>
+    <p class="desc">把毫厘放大成世界。极致的清晰与柔和的背景虚化，让寻常之物焕发神采。适合自然、植物、产品细节。关键词「极近微距」「超高清晰」配「柔焦背景」，一前一后立刻拉开层次。</p>
+    <div class="prompts">
+      <div class="block core">
+        <span class="blabel">核心提示词 · Core</span>
+        <div class="txt">extreme macro, dew drop, ultra sharp, soft bokeh, vivid natural colors, botanical</div>
+      </div>
+      <div class="block full">
+        <span class="blabel">完整提示词 · Full</span>
+        <div class="box">
+          <button class="copy" data-target="p5full" aria-label="复制完整提示词">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            <span>复制</span>
+          </button>
+          <pre id="p5full">Extreme macro photography: a single large dew drop resting on a green leaf edge refracting soft morning light, ultra sharp detail, soft bokeh background, vivid natural greens, shallow depth of field, botanical fine art, crisp and luminous</pre>
+        </div>
+      </div>
+    </div>
+    <div class="exif mono">
+      <span class="e">macro 1:1</span><span class="e">f/2.8</span><span class="e">bokeh</span><span class="e">botanical</span>
+    </div>
+  </div>
+</article>
+
+<!-- ===== 06 夜影 ===== -->
+<article class="plate rev" id="p6">
+  <div class="frame">
+    <div class="aspect">
+      <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/CFUAbqcuaooT3VxQfw6cLhzKnpc" alt="都市夜影示例图：霓虹倒影的赛博朋克巷道" loading="lazy">
+    </div>
+    <span class="cap">PLATE 06 · CITY NOIR</span>
+  </div>
+  <div class="label">
+    <div class="head">
+      <div class="num">06</div>
+      <div class="title"><h2>都市夜影<span class="en">City Noir</span></h2></div>
+    </div>
+    <span class="tag mono">霓虹 · 冷调 · 氛围</span>
+    <p class="desc">城市入夜后的另一副面孔——霓虹、湿漉的路面与光雾。适合赛博朋克、都市情绪、夜晚叙事。关键词「霓虹」「潮湿路面的倒影」「光雾」三件套，立刻把人拉进雨夜的都市深处。</p>
+    <div class="prompts">
+      <div class="block core">
+        <span class="blabel">核心提示词 · Core</span>
+        <div class="txt">cyberpunk noir, neon, wet street reflection, cinematic haze, high contrast</div>
+      </div>
+      <div class="block full">
+        <span class="blabel">完整提示词 · Full</span>
+        <div class="box">
+          <button class="copy" data-target="p6full" aria-label="复制完整提示词">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            <span>复制</span>
+          </button>
+          <pre id="p6full">Cyberpunk noir city night: neon signs glowing cyan and magenta reflecting on wet narrow alley pavement, cinematic atmosphere with light haze and rain droplets, high contrast, futuristic yet gritty, atmospheric depth, striking color palette</pre>
+        </div>
+      </div>
+    </div>
+    <div class="exif mono">
+      <span class="e">neon</span><span class="e">cyan/magenta</span><span class="e">noir</span><span class="e">night</span>
+    </div>
+  </div>
+</article>
+
+<!-- ===== 配方拆解 ===== -->
+<section class="recipe" id="recipe">
+  <div class="kicker mono"><span class="lbl">配方拆解 · ANATOMY</span><span class="rule"></span></div>
+  <h2>一句好提示词，<br>由五味调和而成</h2>
+  <p class="sub">任何摄影提示词都可以拆成五块配方。写之前先想清楚这五味各是什么，句子自然就有了章法——顺序从主体到质感，由近及远。</p>
+  <div class="grid">
+    <div class="ing">
+      <div class="i"><span class="n">01</span><span class="t serif">主体与场景</span></div>
+      <div class="ex">a lone figure crossing a rain-soaked city street</div>
+      <p class="note">先把「谁、在哪里、做什么」交代清楚，这是画面的地基，其余都围着它转。</p>
+    </div>
+    <div class="ing">
+      <div class="i"><span class="n">02</span><span class="t serif">光线与氛围</span></div>
+      <div class="ex">warm amber streetlights, deep shadows, volumetric haze</div>
+      <p class="note">光的来向、色温与软硬，决定情绪。黄昏、霓虹、柔光箱——说具体点。</p>
+    </div>
+    <div class="ing">
+      <div class="i"><span class="n">03</span><span class="t serif">镜头与画幅</span></div>
+      <div class="ex">shallow depth of field, anamorphic, 35mm</div>
+      <p class="note">景深、焦段、画幅与镜头特征，控制取景与纵深的语言。</p>
+    </div>
+    <div class="ing">
+      <div class="i"><span class="n">04</span><span class="t serif">色彩与影调</span></div>
+      <div class="ex">moody teal-orange color grade</div>
+      <p class="note">明确色板与影调（冷暖、高低调），画面风格在此定型。</p>
+    </div>
+    <div class="ing">
+      <div class="i"><span class="n">05</span><span class="t serif">质感与媒介</span></div>
+      <div class="ex">35mm film grain, award-winning composition</div>
+      <p class="note">颗粒、胶片、印刷质感等「媒介指纹」，让成品更像真实摄影。</p>
+    </div>
+    <div class="ing">
+      <div class="i"><span class="n">·</span><span class="t serif">一句话心法</span></div>
+      <p class="note" style="border:none;padding:0;margin-top:2px">先想画面，再写句子；给 AI 具体的名词与动词，而非抽象的形容词堆叠。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 页脚 ===== -->
+<footer class="footer">
+  <div class="top">
+    <div class="t">拍出你想要的那张照片<span class="en">THE PROMPT PHOTOGRAPH</span></div>
+    <a class="mono" href="#top" style="color:var(--accent);border-bottom:1px solid var(--accent);padding-bottom:2px">返回卷首 ↑</a>
+  </div>
+  <div class="bottom">
+    <span>© 2026 · AI 摄影提示词图鉴 · VOL.01</span>
+    <span>主体 · 光线 · 镜头 · 色彩 · 质感</span>
+    <span class="r">六种摄影语言，一册收齐</span>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+var toast=document.getElementById('toast');
+var timer=null;
+function show(msg){
+  toast.textContent=msg;toast.classList.add('show');
+  clearTimeout(timer);
+  timer=setTimeout(function(){toast.classList.remove('show');},1600);
+}
+function copyText(txt){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(txt).then(function(){return true;}).catch(function(){return false;});
+  }
+  // fallback
+  var ta=document.createElement('textarea');
+  ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  var ok=false;
+  try{ok=document.execCommand('copy');}catch(e){ok=false;}
+  document.body.removeChild(ta);
+  return Promise.resolve(ok);
+}
+document.querySelectorAll('.copy').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var id=btn.getAttribute('data-target');
+    var pre=document.getElementById(id);
+    if(!pre)return;
+    copyText(pre.textContent.trim()).then(function(ok){
+      if(ok){
+        btn.classList.add('done');
+        btn.querySelector('span').textContent='已复制';
+        setTimeout(function(){btn.classList.remove('done');btn.querySelector('span').textContent='复制';},1400);
+      }else{
+        show('复制失败，请手动选择文本');
+      }
+    });
+  });
+});
+})();
+</script>
+</body>
+</html>
