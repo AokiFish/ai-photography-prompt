@@ -5,10 +5,12 @@ compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
 
 # D1 数据库绑定。本地用 `wrangler d1 execute DB --local`；
-# 生产部署前用 `wrangler d1 execute DB --remote --file=./migrations/0001_init.sql` 初始化，
-# 并在 Cloudflare 控制台 / 此文件里把 DB 绑定到 Pages 项目的生产环境。
+# 生产部署前用 `wrangler d1 execute DB --remote --file=./migrations/0001_init.sql` 初始化。
+# database_id 用环境变量占位，真值在 Cloudflare Pages 项目
+# Settings → Variables and Secrets 里配置 (Production)：D1_DATABASE_ID=<真实 UUID>。
+# 不把 UUID 硬编码进仓库。
 [[d1_databases]]
 binding = "DB"
 database_name = "ai-photography-prompt"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "${D1_DATABASE_ID}"
 migrations_dir = "migrations"
