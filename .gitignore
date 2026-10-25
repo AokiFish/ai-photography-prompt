@@ -2,6 +2,7 @@ node_modules/
 .next/
 .vercel/
 .wrangler/
+.d1-batches/   # sync 工作流临时拆批产物，勿提交
 .dev.vars
 *.local
 .env*

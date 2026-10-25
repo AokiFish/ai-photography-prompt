@@ -171,7 +171,10 @@ export function normalizeItem(raw) {
 const SQL_NULL = "__NULL__";
 
 function sqlVal(v) {
-  if (v === null || v === undefined || v === "") return SQL_NULL;
+  if (v === null || v === undefined) return SQL_NULL;
+  // 空串不再写成 NULL：D1 表 prompt_text/style/collected_at 等是 NOT NULL，
+  // 写 NULL 会直接让该条 INSERT 失败（且非事务执行会留下残缺数据）。空串留空串字面量更安全。
+  if (v === "") return "''";
   return String(v).replace(/'/g, "''");
 }
 

@@ -3,6 +3,11 @@ name: Sync Dataset → Cloudflare D1
 # 仓库主分支推送（含每日采集提交、或你手动改代码后提交数据集）时，
 # 自动把 data/prompts.sql 同步进 Cloudflare D1。这就是「部署 → 自动同步 D1」。
 # 仅当数据集文件变化时才跑，避免无谓同步。
+#
+# 关键修复：不再把全部 INSERT 一次性塞进 `wrangler d1 execute --file`
+#   （单次调用有平台语句数/大小限制，会被静默截断 → D1 只写进前面一部分）。
+# 改为先由 scripts/split-d1-sql.mjs 拆成每批 ≤20 条的小文件，再用 shell 循环
+# 逐批执行；末尾严格校验 D1 行数 == 数据集条数，不符则让工作流失败（问题可见）。
 on:
   push:
     branches: [main]
@@ -16,7 +21,7 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -24,7 +29,10 @@ jobs:
         with:
           node-version: 22
 
-      - name: Sync data/prompts.sql → D1 (--remote)
+      - name: Split SQL into small batches
+        run: node scripts/split-d1-sql.mjs
+
+      - name: Apply batches to D1 (--remote)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -35,16 +43,24 @@ jobs:
           fi
           # 去除 Secrets 粘贴时常带的换行/空格，避免 Authorization 头格式非法
           CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
-          # 0) 先清理历史脏数据：早期「首页兜底」采集写入 D1 的记录，
-          #    source_url 是站点根（无 /prompt/ 内页），会让弹窗「打开完整网页」跳到源站首页。
-          #    prmpt 的有效记录一定来自详情页，URL 必含 /prompt/，此删除不会误伤。
-          cat > .d1-cleanup.sql <<'SQL'
-          DELETE FROM prompts WHERE source = 'prmpt' AND (source_url IS NULL OR source_url NOT LIKE '%/prompt/%');
-          SQL
-          npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --file=.d1-cleanup.sql
-          # 1) 再把仓库数据集刷进 D1（INSERT OR REPLACE：覆盖同 id、追加新 id）
-          npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --file=data/prompts.sql
-          # 2) 验证：打印总数 + 脏 URL 数（source_url 不含 /prompt/ 的记录）。
-          #    正常应为 bad_url=0；若 >0 说明数据集混入了首页兜底产物，需检查采集路径。
-          npx --yes wrangler@latest d1 execute ai-photography-prompt --remote \
-            --command "SELECT COUNT(*) AS total, SUM(CASE WHEN source_url IS NULL OR source_url NOT LIKE '%/prompt/%' THEN 1 ELSE 0 END) AS bad_url FROM prompts;"
+          shopt -s nullglob
+          for f in .d1-batches/*.sql; do
+            echo "▶ 执行 $f"
+            npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --file="$f"
+          done
+
+      - name: Verify row count matches dataset
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
+          EXPECTED=$(node -e "console.log(JSON.parse(require('fs').readFileSync('data/prompts.json','utf8')).length)")
+          TOTAL=$(npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --command "SELECT COUNT(*) AS total FROM prompts;" --json \
+            | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const o=JSON.parse(s);const r=o.result&&o.result[0]&&o.result[0].results&&o.result[0].results[0];console.log(r?(r.total!==undefined?r.total:r['COUNT(*)']):'')}catch(e){console.log('')}})")
+          echo "数据集条数 = $EXPECTED | D1 实际条数 = $TOTAL"
+          if [ "$TOTAL" != "$EXPECTED" ]; then
+            echo "✘ 行数不符：D1 未全量同步（期望 $EXPECTED，实际 $TOTAL）。请检查上方批次执行日志。"
+            exit 1
+          fi
+          echo "✔ D1 已与数据集完全一致（$TOTAL 条）"
