@@ -16,9 +16,9 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 
-import { collectPrmpt } from "./sources/prmpt.mjs";
-import { collectLexica } from "./sources/lexica.mjs";
-import { promptsToSql, sourcesMetaToSql } from "./util.mjs";
+import { collectPrmpt } from "./collect/sources/prmpt.mjs";
+import { collectLexica } from "./collect/sources/lexica.mjs";
+import { promptsToSql, sourcesMetaToSql } from "./collect/util.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..", "..");
