@@ -1,12 +1,17 @@
 "use client";
 
 import type { Prompt } from "@/lib/types";
-import { STYLE_LABELS } from "@/lib/types";
+import { PRO_CATEGORIES } from "@/lib/types";
 import { PlateImage } from "@/components/PlateImage";
 import { CopyButton } from "@/components/CopyButton";
 import { SaveButton } from "@/components/SaveButton";
 
+// 卡片徽标与文本一律显示**专业分类**（官方 12 类中文标签）。
+// 不显示摄影风格（style）——那会冒出「其他 / 人像」这类用户不要的词。
+const categoryLabel = (p: Prompt) => PRO_CATEGORIES[p.category ?? ""] ?? null;
+
 export function PromptCard({ prompt, onOpen }: { prompt: Prompt; onOpen?: () => void }) {
+  const catLabel = categoryLabel(prompt);
   return (
     <article
       role="button"
@@ -26,14 +31,16 @@ export function PromptCard({ prompt, onOpen }: { prompt: Prompt; onOpen?: () => 
             src={prompt.imageUrl}
             alt={prompt.title ?? prompt.promptText.slice(0, 40)}
             styleKey={prompt.style}
-            label={STYLE_LABELS[prompt.style]}
+            label={catLabel ?? undefined}
           />
         </div>
-        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-          <span className="mono rounded" style={{ background: "rgba(20,20,20,.6)", color: "var(--paper-2)", padding: "4px 9px", backdropFilter: "blur(3px)" }}>
-            {STYLE_LABELS[prompt.style]}
-          </span>
-        </div>
+        {catLabel && (
+          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+            <span className="mono rounded" style={{ background: "rgba(20,20,20,.6)", color: "var(--paper-2)", padding: "4px 9px", backdropFilter: "blur(3px)" }}>
+              {catLabel}
+            </span>
+          </div>
+        )}
         <span
           className="mono pointer-events-none absolute bottom-3 right-3 rounded opacity-0 transition-opacity duration-300 group-hover:opacity-100"
           style={{ background: "rgba(20,20,20,.6)", color: "var(--paper)", padding: "4px 9px", fontSize: 10.5, backdropFilter: "blur(3px)" }}
@@ -48,8 +55,8 @@ export function PromptCard({ prompt, onOpen }: { prompt: Prompt; onOpen?: () => 
             {prompt.title}
           </h3>
         )}
-        {prompt.category && (
-          <span className="mono" style={{ color: "var(--faint)" }}>{prompt.category}</span>
+        {catLabel && (
+          <span className="mono" style={{ color: "var(--faint)" }}>{catLabel}</span>
         )}
         <p className="line-clamp-4" style={{ fontFamily: "var(--font-mono),monospace", fontSize: 12.5, lineHeight: 1.7, color: "var(--paper-2)" }}>
           {prompt.promptText}

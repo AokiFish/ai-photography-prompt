@@ -24,6 +24,8 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
   // 真实内页链接：拿不到（脏数据/兜底记录没有详情页）时隐藏按钮，
   // 绝不退化成源站首页——那会误导用户。
   const detailUrl = resolveDetailUrl(prompt);
+  // 徽标只显示**专业分类**（官方 12 类）；确实没有分类数据时才回退摄影风格。
+  const catLabel = PRO_CATEGORIES[prompt.category ?? ""] ?? null;
 
   return (
     <div
@@ -62,13 +64,8 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
         <div className="flex max-h-[90vh] flex-col overflow-y-auto p-6 sm:p-8">
           <div className="flex flex-wrap items-center gap-2">
             <span className="mono rounded" style={{ background: "rgba(237,231,218,.1)", color: "var(--paper-2)", padding: "4px 9px" }}>
-              {STYLE_LABELS[prompt.style]}
+              {catLabel ?? STYLE_LABELS[prompt.style]}
             </span>
-            {prompt.category && (
-              <span className="mono" style={{ color: "var(--faint)" }}>
-                {PRO_CATEGORIES[prompt.category] ?? prompt.category}
-              </span>
-            )}
           </div>
 
           {prompt.title && (
