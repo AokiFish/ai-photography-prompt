@@ -31,7 +31,7 @@ jobs:
       # 生产红线守卫：批次里若出现 DELETE / TRUNCATE / DROP，立即失败，绝不写库。
       # （生成器已被改为纯 INSERT OR REPLACE，这里是第二道防线：CI 上任何一次
       #   「先删后插」的改动都会被这一步拦下，而不是等到 D1 被清空才发现。）
-      - name: Guard: batches must not contain destructive SQL
+      - name: "Guard: batches must not contain destructive SQL"
         run: node scripts/assert-no-destructive-sql.mjs .d1-batches
 
       - name: Apply batches to D1 (--remote)
