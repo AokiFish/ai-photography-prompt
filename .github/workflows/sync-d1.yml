@@ -52,11 +52,30 @@ jobs:
         run: |
           CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
           EXPECTED=$(node -e "console.log(JSON.parse(require('fs').readFileSync('data/prompts.json','utf8')).length)")
-          TOTAL=$(npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --command "SELECT COUNT(*) AS total FROM prompts;" --json \
-            | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const o=JSON.parse(s);const r=o.result&&o.result[0]&&o.result[0].results&&o.result[0].results[0];console.log(r?(r.total!==undefined?r.total:r['COUNT(*)']):'')}catch(e){console.log('')}})")
+          # wrangler --json 输出为顶层数组：[{ "results": [{ "total": N }] }]
+          # （npx 安装提示走 stderr，不污染 stdout）；容错解析，避免非 JSON 前导导致误判
+          RAW=$(npx --yes wrangler@latest d1 execute ai-photography-prompt --remote --command "SELECT COUNT(*) AS total FROM prompts;" --json 2>/tmp/wrangler.err) \
+            || { echo "wrangler 执行失败："; cat /tmp/wrangler.err; exit 1; }
+          TOTAL=$(printf '%s' "$RAW" | node -e "
+            let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{
+              const i=Math.min(s.indexOf('[')<0?1e9:s.indexOf('['), s.indexOf('{')<0?1e9:s.indexOf('{'));
+              if(i<1e9) s=s.slice(i);
+              let total='';
+              try{
+                const o=JSON.parse(s);
+                const blocks=Array.isArray(o)?o:(o.result&&Array.isArray(o.result)?o.result:(o.results?[o]:[]));
+                for(const b of blocks){
+                  const rows=b&&b.results?b.results:(b&&b.result?b.result:[]);
+                  for(const r of rows){ if(r&&r.total!==undefined){total=r.total;break;} }
+                  if(total!=='')break;
+                }
+              }catch(e){}
+              console.log(total);
+            })")
           echo "数据集条数 = $EXPECTED | D1 实际条数 = $TOTAL"
-          if [ "$TOTAL" != "$EXPECTED" ]; then
-            echo "✘ 行数不符：D1 未全量同步（期望 $EXPECTED，实际 $TOTAL）。请检查上方批次执行日志。"
+          if [ -z "$TOTAL" ] || [ "$TOTAL" != "$EXPECTED" ]; then
+            echo "✘ 行数不符：期望 $EXPECTED，实际 '$TOTAL'。请检查上方批次执行日志。原始返回（前 400 字符）："
+            printf '%s' "$RAW" | head -c 400
             exit 1
           fi
           echo "✔ D1 已与数据集完全一致（$TOTAL 条）"
