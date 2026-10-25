@@ -1,18 +1,14 @@
 name: Sync Dataset → Cloudflare D1
 
-# 仓库主分支推送（含每日采集提交、或你手动改代码后提交数据集）时，
-# 自动把 data/prompts.sql 同步进 Cloudflare D1。这就是「部署 → 自动同步 D1」。
-# 仅当数据集文件变化时才跑，避免无谓同步。
+# 仅由采集器（collect.yml）在「采集成功 + 确有更新」后显式触发，
+# 或你手动 Run workflow 时执行。这就是「采集成功后才同步 D1」的硬保证：
+# sync-d1 不会自己因任何 push 而跑，只认采集器的调用。
 #
 # 关键修复：不再把全部 INSERT 一次性塞进 `wrangler d1 execute --file`
 #   （单次调用有平台语句数/大小限制，会被静默截断 → D1 只写进前面一部分）。
 # 改为先由 scripts/split-d1-sql.mjs 拆成每批 ≤20 条的小文件，再用 shell 循环
 # 逐批执行；末尾严格校验 D1 行数 == 数据集条数，不符则让工作流失败（问题可见）。
 on:
-  push:
-    branches: [main]
-    paths:
-      - "data/prompts.sql"
   workflow_dispatch: {}
 
 permissions:

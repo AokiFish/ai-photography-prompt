@@ -18,7 +18,8 @@ on:
         default: ""
 
 permissions:
-  contents: write # 需要把数据集提交回仓库
+  contents: write # 把数据集提交回仓库
+  actions: write  # 采集成功且有更新时，主动触发 sync-d1.yml 把数据同步进 D1
 
 concurrency:
   group: collect-d1
@@ -48,8 +49,13 @@ jobs:
           LEXICA_PER_QUERY: "0" # action 内跳过 lexica
         run: node scripts/collect.mjs
 
-      # 提交数据集回仓库（触发 sync-d1.yml 同步 D1）
+      # 数据集校验闸：退化/脏数据一律不提交、不同步（否则会把垃圾写进 D1）
+      - name: Validate dataset
+        run: node scripts/validate-dataset.mjs
+
+      # 校验通过才提交；有变化才推送（无更新 → 不提交、不触发同步）
       - name: Commit dataset
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -57,6 +63,18 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "data: 每日采集更新 $(date -u +%F)"
             git push origin HEAD:main
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "✔ 数据集已提交并推送"
           else
-            echo "无新数据，跳过提交"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "无新数据，跳过提交与同步"
           fi
+
+      # 采集成功 + 确有更新 → 才触发 D1 同步（显式依赖，Actions 里可见链路）
+      - name: Trigger D1 sync
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "▶ 采集成功且有更新，触发 sync-d1.yml"
+          gh workflow run sync-d1.yml
