@@ -1,7 +1,7 @@
 name: Collect Prompts (Daily)
 
-# 采集 prmpt.it.com 官方分类页 → 更新仓库数据集 data/prompts.sql/.json → 推送 main
-# → sync-d1.yml 自动同步进 Cloudflare D1。
+# 采集 prmpt.it.com（sitemap 列全部 /prompt/<slug> → 抓详情页取权威分类/提示词）
+# → 更新仓库数据集 data/prompts.sql/.json → 推送 main → sync-d1.yml 自动同步进 Cloudflare D1。
 #
 # 用法：
 #   定时（每天 08:00 北京时间）：抓官方全部 12 个分类。
@@ -42,7 +42,7 @@ jobs:
       # 注意：不再安装 playwright/chromium——lexica 被 Cloudflare 拦数据中心 IP，
       # action 内采不到（本地住宅 IP 跑 node scripts/collect.mjs 并设
       # LEXICA_PER_QUERY=8 才会走浏览器路径采 lexica）。action 只抓 prmpt。
-      - name: Scrape PRMPT (official category pages)
+      - name: Scrape PRMPT (sitemap + detail pages)
         env:
           FETCH_DELAY: "1500" # 请求间隔(ms)
           PRMPT_CATEGORY: ${{ github.event.inputs.category }} # 手动触发时可选单分类；定时为空=全部

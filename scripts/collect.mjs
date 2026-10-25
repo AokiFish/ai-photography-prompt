@@ -70,6 +70,18 @@ async function main() {
       : Promise.resolve([]),
   ]);
 
+  // 红线：PRMPT 主源本轮 0 条 = 采集失败（站点结构变化 / 被拦截 / 指定分类根本采不到）。
+  // 显式非零退出 → GitHub Actions 该步变红、后续「校验/提交/同步」全部中止，
+  // 避免把空/退化数据集写进仓库或 D1（杜绝「0 条却报成功」）。
+  // 注意：lexica 在 action 内默认跳过（=0）属正常，不以它判失败。
+  if (prmpt.length === 0) {
+    const scope = CATEGORIES.length ? `指定分类 ${CATEGORIES.join(",")}` : "全部分类";
+    console.error(
+      `✘ 采集失败：PRMPT ${scope} 本轮采集到 0 条——站点结构可能变化或被拦截，终止以免写入空/退化数据集`
+    );
+    process.exit(1);
+  }
+
   // 仓库现有数据集作为去重基底（按 id / image_url）。
   const existing = loadDataset();
   const byId = new Map(existing.map((r) => [r.id, r]));

@@ -1,13 +1,18 @@
 // PRMPT 采集器 — https://prmpt.it.com/
-// 精品画廊（编辑 / 时尚 / 肖像类提示词）。
 //
-// 实测（2026-10-25）：站点为 Next.js。/gallery 可能是 SSR（初始 HTML 含
-// <a href="/prompt/..."> 卡片）也可能是 CSR（卡片由 __NEXT_DATA__ 首屏 JSON
-// 经 JS 渲染）。本采集器两种都兼容：先按 <a> 卡片解析，解析不到再回退到
-// __NEXT_DATA__ 里的 prompt 对象；两者都为 0 时再回退首页 __NEXT_DATA__。
+// 重要（2026-10-25 实测）：该站是 **Vite React SPA**，卡片由客户端从 Firebase
+// 拉取，分类页 /category/<key> 多数被服务端预渲染了卡片，但**部分分类（如 product）
+// 是纯客户端渲染——初始 HTML 里 0 张卡片**，静态抓取必然 0 条（product 因此一直漏采）。
+//
+// 故本采集器不再依赖分类页列卡片，改为：
+//   1) 读 /sitemap.xml 拿到全站全部 /prompt/<slug> 链接（完整、稳定）；
+//   2) 逐个抓详情页（详情页是 SSR：<head> 含 og:image / og:title / og:description，
+//      正文含面包屑 /category/<key> 权威分类）；
+//   3) extractDetail 从详情页取 标题 / 提示词(og:description) / 配图 / 权威分类。
+// 这样 100% 覆盖所有分类（含 product），不依赖 Firebase、不依赖浏览器。
 // 分类「归一映射」交给 util.mjs 的 normalizeItem，本文件不擅自定分类。
 
-import { fetchText, KNOWN_CATEGORIES } from "../util.mjs";
+import { fetchText } from "../util.mjs";
 
 const BASE = "https://prmpt.it.com";
 
@@ -16,76 +21,7 @@ function pick(re, html, group = 1) {
   return m ? m[group].trim() : "";
 }
 
-// 解析列表页：优先 <a href="/prompt/..."> 卡片；否则从 __NEXT_DATA__ 取对象。
-// forceCategory：调用方传入页面级权威分类（/category/<key> 采集时用）。
-// **无权威分类时一律 siteCategory=null**——曾用 CAT_RE 从卡片全文扫描猜分类，
-// 导致提示词文本里出现 "artistic" 就被乱分到艺术类（用户强烈反对的“自作主张”）。
-// 兜底路径没有权威分类就不猜，交由详情页明确标注 / normalizeItem 处理。
-export function parseGalleryCards(html, forceCategory = null) {
-  const cards = [];
-  const seen = new Set();
-
-  // 策略 A：<a> 卡片
-  const re = /<a[^>]+href=["']([^"']*\/prompt\/[^"']+)["'][\s\S]*?<\/a>/gi;
-  let m;
-  while ((m = re.exec(html))) {
-    const href = m[1];
-    const inner = m[0];
-    const slug = href.replace(/^.*\/prompt\//, "").replace(/[?#].*$/, "");
-    if (!slug || seen.has(slug)) continue;
-    seen.add(slug);
-    const imgM = inner.match(/<img[^>]+src=["']([^"']+)["']/i);
-    cards.push({
-      slug,
-      sourceUrl: href.startsWith("http") ? href : BASE + href,
-      siteCategory: forceCategory ?? null, // 无权威分类 = 不猜
-      galleryImage: imgM ? imgM[1] : null,
-    });
-  }
-  if (cards.length) return cards;
-
-  // 策略 B：__NEXT_DATA__ 里的 prompt 对象
-  const nd = html.match(/<script id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
-  if (nd) {
-    let data;
-    try {
-      data = JSON.parse(nd[1]);
-    } catch {
-      return cards;
-    }
-    const walk = (v) => {
-      if (Array.isArray(v)) return v.forEach(walk);
-      if (v && typeof v === "object") {
-        const o = v;
-        const slug = typeof o.slug === "string" ? o.slug : null;
-        const title = typeof o.title === "string" ? o.title : null;
-        const img =
-          typeof o.image === "string"
-            ? o.image
-            : typeof o.imageUrl === "string"
-            ? o.imageUrl
-            : typeof o.cover === "string"
-            ? o.cover
-            : null;
-        const cat = typeof o.category === "string" ? o.category : null;
-        if ((slug || title) && img && !seen.has(slug || title)) {
-          seen.add(slug || title);
-          cards.push({
-            slug: slug || title,
-            sourceUrl: slug ? BASE + "/prompt/" + slug : BASE,
-            siteCategory: forceCategory ?? (cat ? cat.toLowerCase() : null),
-            galleryImage: img,
-          });
-        }
-        Object.values(o).forEach(walk);
-      }
-    };
-    walk(data);
-  }
-  return cards;
-}
-
-// 从详情页提取真实提示词 + 配图 + 标题
+// 从详情页提取真实提示词 + 配图 + 标题 + 权威分类（面包屑 /category/<key>）。
 export function extractDetail(html) {
   const ogDesc = pick(
     /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i,
@@ -111,205 +47,125 @@ export function extractDetail(html) {
     .trim()
     .slice(0, 2000);
 
-  // 从详情页提取「明确标注」的分类（优于 gallery 卡片全文扫描，避免误判人像等）：
-  // 1) 面包屑 /category/<key>  2) URL 中 ?category=<key>  3) <meta property="article:section">
-  // 取不到则回退 null，由调用方回退到卡片标注的 siteCategory。
-  const catM =
-    html.match(/href=["'][^"']*\/category\/([a-z0-9-]+)/i) ||
-    html.match(/[?&]category=([a-z0-9-]+)/i) ||
-    html.match(/<meta[^>]+property=["']article:section["'][^>]+content=["']([^"']+)["']/i);
+  // 权威分类：面包屑 /category/<key>（详情页 SSR，最可靠；不扫描卡片全文乱猜）
+  const catM = html.match(/href=["'][^"']*\/category\/([a-z0-9-]+)/i);
   const detailCategory = catM ? catM[1].toLowerCase() : null;
 
   return {
     title: title ? title.slice(0, 120) : null,
     promptText: promptText || null,
     imageUrl: ogImage || null,
-    category: detailCategory, // 详情页权威分类，collectPrmpt 会优先采用
+    category: detailCategory,
   };
 }
 
-// 首页 __NEXT_DATA__ 兜底：遍历 JSON 找像提示词的长字符串（保证不退化到 0 条）
-const PROMPT_HINT =
-  /(shot on|camera|kodak|portra|cinematic|portrait|lens|fujifilm|35mm|85mm|editorial|aperture|film grain)/i;
-function hash(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h.toString(36);
-}
-function extractHomepage(html) {
-  const m = html.match(/<script id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
-  if (!m) return [];
-  let data;
-  try {
-    data = JSON.parse(m[1]);
-  } catch {
-    return [];
-  }
-  const found = [];
-  const seenText = new Set();
-  const walk = (v) => {
-    if (typeof v === "string") {
-      const s = v.trim();
-      if (s.length > 40 && s.length < 2000 && PROMPT_HINT.test(s) && !seenText.has(s)) {
-        seenText.add(s);
-        found.push(s);
-      }
-    } else if (Array.isArray(v)) v.forEach(walk);
-    else if (v && typeof v === "object") Object.values(v).forEach(walk);
+// 读 sitemap 拿到全站全部 /prompt/<slug> 链接。
+// 兼容单文件 sitemap 与 sitemapindex（子 sitemap）。
+async function getSitemapSlugs() {
+  const out = [];
+  const seen = new Set();
+  const pushLoc = (xml) => {
+    const locs = [
+      ...xml.matchAll(/<loc>\s*(https?:\/\/[^<]*?\/prompt\/([^<]+?))\s*<\/loc>/g),
+    ];
+    for (const m of locs) {
+      const url = m[1];
+      const slug = m[2].replace(/[?#].*$/, "");
+      if (!slug || seen.has(slug)) continue;
+      seen.add(slug);
+      out.push({ sourceUrl: url.startsWith("http") ? url : BASE + url, slug });
+    }
   };
-  walk(data);
-  const ogImage = pick(
-    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
-    html
-  );
-  return found.slice(0, 40).map((t, i) => ({
-    id: `prmpt:home:${i}:${hash(t)}`,
-    source: "prmpt",
-    sourceUrl: BASE,
-    title: null,
-    promptText: t.slice(0, 2000),
-    negativePrompt: null,
-    category: null,
-    style: null,
-    model: null,
-    imageUrl: ogImage || null,
-    tags: [],
-    collectedAt: Date.now(),
-  }));
+  try {
+    const xml = await fetchText(`${BASE}/sitemap.xml`, {
+      delay: 600,
+      accept: "application/xml,text/xml;q=0.9,*/*;q=0.8",
+    });
+    pushLoc(xml);
+    // sitemapindex：递归读子 sitemap
+    const subs = [
+      ...xml.matchAll(/<loc>\s*(https?:\/\/[^<]+?sitemap[^<]*?)\s*<\/loc>/g),
+    ].map((m) => m[1]);
+    for (const sub of subs) {
+      try {
+        const sx = await fetchText(sub, { delay: 600 });
+        pushLoc(sx);
+      } catch (e) {
+        console.warn(`[prmpt] 子 sitemap 读取失败 ${sub}: ${e.message}`);
+      }
+    }
+  } catch (e) {
+    console.warn(`[prmpt] sitemap 读取失败: ${e.message}`);
+  }
+  return out;
 }
 
 /**
  * 采集 PRMPT 全量提示词。
  *
- * 主路径（官方分类页）：https://prmpt.it.com/category/<key> × 官方 12 类，
- * 每类分页抓到底。分类直接用页面 key——站点怎么标我们就怎么存，零猜测。
- * 兜底路径：分类页整体不可用时退回 /gallery 分页；再不行退回首页
- * __NEXT_DATA__（保证不退化到 0 条，但该路径产出的记录无官方分类，
- * 由 normalizeItem 兜底，且 source_url 为站点根、前端会隐藏「打开完整网页」）。
+ * 主路径（sitemap → 详情页）：读 /sitemap.xml 拿全部 /prompt/<slug>，逐个抓详情页
+ * 取 标题/提示词/配图/权威分类。覆盖所有分类（含 product 这类 CSR 分类页）。
  *
  * @param {object} opts
  * @param {number} opts.limit       最多采集条数（默认 0 = 全部）
  * @param {number} opts.delay       请求间隔(ms)
- * @param {number} opts.maxPages    单个列表最多翻页数（默认 30）
- * @param {string[]|null} opts.categories 只抓这些分类（默认 null = 官方全部 12 类）。
- *                                  用于「一个分类一个分类地抓」，便于逐类排查。
+ * @param {number} opts.maxPages    保留参数（兼容旧签名，sitemap 模式不分页）
+ * @param {string[]|null} opts.categories 只抓这些分类（默认 null = 全部）。
+ *                                  分类精确匹配详情页权威分类；指定分类却 0 条 = 采集失败（交由上层 exit 1）。
  */
 export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30, categories = null } = {}) {
   const raw = [];
   const seen = new Set();
 
-  // 分类清单：传入则只抓指定分类（无效名警告并忽略）；未传抓官方全部 12 类
-  const allCats = [...KNOWN_CATEGORIES];
-  let cats = allCats;
-  if (categories && categories.length) {
-    cats = categories
-      .map((c) => String(c).trim().toLowerCase())
-      .filter((c) => allCats.includes(c));
-    if (cats.length === 0) {
-      console.warn(
-        `[prmpt] ⚠ 指定的分类无有效值（有效分类: ${allCats.join(", ")}），本次回退为抓全部分类`
-      );
-      cats = allCats;
-    } else {
-      console.log(`[prmpt] 仅抓指定分类: ${cats.join(", ")}`);
-    }
+  // 分类筛选：用户指定则只保留该分类（精确匹配详情页权威分类），绝不采回别的分类
+  const cats = categories && categories.length
+    ? categories.map((c) => String(c).trim().toLowerCase()).filter(Boolean)
+    : null;
+  if (cats) console.log(`[prmpt] 仅抓指定分类: ${cats.join(", ")}`);
+
+  // 主路径：sitemap 列全部 slug → 逐个抓详情页
+  const slugs = await getSitemapSlugs();
+  console.log(`[prmpt] sitemap 解析到 ${slugs.length} 个 prompt 链接`);
+  if (slugs.length === 0) {
+    console.warn(`[prmpt] ⚠ sitemap 无任何 /prompt/ 链接——站点结构可能已变，终止采集`);
+    return raw;
   }
 
-  const grab = async (c) => {
-    if (limit > 0 && raw.length >= limit) return;
-    if (seen.has(c.slug)) return;
-    seen.add(c.slug);
+  let scanned = 0;
+  for (const s of slugs) {
+    if (limit > 0 && raw.length >= limit) break;
+    if (seen.has(s.slug)) continue;
+    seen.add(s.slug);
     try {
-      const dhtml = await fetchText(c.sourceUrl, { delay });
-      const d = extractDetail(dhtml);
+      const html = await fetchText(s.sourceUrl, { delay });
+      const d = extractDetail(html); // 权威分类来自面包屑 /category/<key>
+      const cat = d.category ? d.category.toLowerCase() : null;
+      if (cats && (!cat || !cats.includes(cat))) continue; // 指定分类模式：不匹配即跳过
+      scanned++;
       raw.push({
-        id: `prmpt:${c.slug}`,
+        id: `prmpt:${s.slug}`,
         source: "prmpt",
-        sourceUrl: c.sourceUrl,
+        sourceUrl: s.sourceUrl,
         title: d.title,
         promptText: d.promptText,
         negativePrompt: null,
-        // 列表页官方标注优先；详情页明确标注（/category/ 链接）仅在同页更权威时采用
-        category: c.siteCategory || d.category,
+        category: cat,
         style: null,
         model: null,
-        imageUrl: d.imageUrl || c.galleryImage,
+        imageUrl: d.imageUrl,
         tags: [],
         collectedAt: Date.now(),
       });
     } catch (e) {
-      console.warn(`[prmpt] 跳过 ${c.sourceUrl}: ${e.message}`);
-    }
-  };
-
-  // 策略 A（主路径）：官方分类页分页采集（cats 可为指定子集）
-  let catTotal = 0;
-  try {
-    for (const cat of cats) {
-      let page = 0;
-      while (page < maxPages && (limit <= 0 || raw.length < limit)) {
-        const url =
-          page === 0 ? `${BASE}/category/${cat}` : `${BASE}/category/${cat}?page=${page + 1}`;
-        const html = await fetchText(url, { delay: page === 0 ? 800 : delay });
-        const cards = parseGalleryCards(html, cat);
-        console.log(`[prmpt] /category/${cat} 第 ${page + 1} 页解析到 ${cards.length} 卡片`);
-        catTotal += cards.length;
-        if (cards.length === 0) break;
-        for (const c of cards) await grab(c);
-        page++;
-        // 无显式分页链接且本页卡片很少，视为已到末页
-        if (!/page=\d+/i.test(html) && cards.length < 12) break;
-      }
-    }
-  } catch (e) {
-    console.warn(`[prmpt] 分类页采集异常: ${e.message}`);
-  }
-
-  // 策略 B（兜底）：仅「全量模式」下分类页整体 0 条时才回退 /gallery 分页。
-  // 单分类排查模式下 0 条就是 0 条——明确报告，不悄悄采回别的分类数据。
-  if (raw.length === 0 && cats.length >= allCats.length) {
-    console.log(`[prmpt] 分类页解析为 0，回退 /gallery 分页`);
-    try {
-      let page = 0;
-      while (page < maxPages && (limit <= 0 || raw.length < limit)) {
-        const url = page === 0 ? `${BASE}/gallery` : `${BASE}/gallery?page=${page + 1}`;
-        const html = await fetchText(url, { delay: page === 0 ? 800 : delay });
-        const cards = parseGalleryCards(html);
-        console.log(`[prmpt] gallery 第 ${page + 1} 页解析到 ${cards.length} 卡片`);
-        if (cards.length === 0) break;
-        for (const c of cards) await grab(c);
-        page++;
-        if (!/\/gallery\?page=\d+/i.test(html) && cards.length < 12) break;
-      }
-    } catch (e) {
-      console.warn(`[prmpt] gallery 采集异常: ${e.message}`);
+      console.warn(`[prmpt] 跳过 ${s.sourceUrl}: ${e.message}`);
     }
   }
 
-  // 策略 C（兜底）：仅「全量模式」下仍为 0 才回退首页 __NEXT_DATA__。
-  // 单分类模式 0 条则保持 0，交由上层在日志里明确暴露问题。
-  if (raw.length === 0 && cats.length >= allCats.length) {
-    console.log(`[prmpt] gallery 解析为 0，回退首页 __NEXT_DATA__ 提取`);
-    try {
-      const home = await fetchText(BASE, { delay: 800 });
-      const items = extractHomepage(home);
-      console.log(`[prmpt] 首页提取到 ${items.length} 条`);
-      for (const it of items) {
-        if (!seen.has(it.id)) {
-          seen.add(it.id);
-          raw.push(it);
-        }
-      }
-    } catch (e) {
-      console.warn(`[prmpt] 首页提取失败: ${e.message}`);
-    }
-  }
-
-  if (raw.length === 0) {
+  console.log(`[prmpt] 合计 ${raw.length} 条（已扫描详情页 ${scanned}）`);
+  if (cats && raw.length === 0) {
     console.warn(
-      `[prmpt] ⚠ 本次指定分类 ${cats.join(", ")} 一条都没采到——请检查 https://prmpt.it.com/category/${cats[0]} 的可访问性与页面结构`
+      `[prmpt] ⚠ 指定分类 ${cats.join(", ")} 一条都没采到——请检查 https://prmpt.it.com/category/${cats[0]} 与详情页分类标注`
     );
   }
-  console.log(`[prmpt] 合计 ${raw.length} 条（分类页卡片约 ${catTotal}）`);
   return raw;
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPromptBySlug } from "@/lib/prompts";
-import { PRO_CATEGORIES, STYLE_LABELS, STYLE_INTRO, resolveDetailUrl, SOURCE_LABELS } from "@/lib/types";
+import { PRO_CATEGORIES, STYLE_LABELS, STYLE_INTRO } from "@/lib/types";
 import { PlateImage } from "@/components/PlateImage";
 import { CopyButton } from "@/components/CopyButton";
 import { SaveButton } from "@/components/SaveButton";
@@ -35,8 +35,6 @@ export default async function PromptDetailPage({
   if (!prompt) notFound();
 
   const catLabel = PRO_CATEGORIES[prompt.category ?? ""] ?? null;
-  const sourceUrl = resolveDetailUrl(prompt);
-  const sourceLabel = SOURCE_LABELS[prompt.source];
 
   return (
     <div className="pad-x" style={{ paddingTop: "clamp(34px,6vh,60px)", paddingBottom: "clamp(60px,9vh,110px)" }}>
@@ -166,17 +164,6 @@ export default async function PromptDetailPage({
 
           <div className="mt-auto flex flex-wrap items-center gap-3 pt-6">
             <SaveButton id={prompt.id} />
-            {sourceUrl && (
-              <a
-                href={sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mono rounded"
-                style={{ border: "1px solid var(--line-strong)", color: "var(--muted)", padding: "9px 16px", fontSize: 11.5 }}
-              >
-                在 {sourceLabel} 查看原图 ↗
-              </a>
-            )}
           </div>
         </div>
       </div>
