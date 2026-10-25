@@ -21,7 +21,7 @@ import { collectLexica } from "./collect/sources/lexica.mjs";
 import { promptsToSql, sourcesMetaToSql } from "./collect/util.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, "..", "..");
+const ROOT = join(__dirname, "..");
 
 const LIMIT = Number(process.env.PRMPT_LIMIT ?? 12);
 const PER_QUERY = Number(process.env.LEXICA_PER_QUERY ?? 8);
