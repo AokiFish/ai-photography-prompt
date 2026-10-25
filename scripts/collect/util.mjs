@@ -208,14 +208,15 @@ export function promptsToSql(rows) {
 }
 
 /**
- * 完整数据集 SQL（先 DELETE 再 INSERT，全量同步）。
- * 以仓库数据集为准刷新 D1：「仓库 = 真相来源，D1 = 镜像」。
- * 这样旧格式 / 脏分类（如人像、电影）数据自然被清掉，无需手爬修正。
+ * 完整数据集 SQL（纯 INSERT OR REPLACE，绝不 DELETE / TRUNCATE）。
+ * 同步策略 = 仅 upsert：按主键 id 追加新数据 + 覆盖同 id（天然去重）。
+ * 绝不清空 / 删全量 D1——D1 行是用户资产，已存在但不在此次数据集中的数据一律保留。
+ * ⚠ 生产红线：任何"先删后插"式的整表重建都禁止；要移除某条只能按明确 id 精确 DELETE。
  */
 export function datasetSql(rows, metas = []) {
   return (
     `-- 数据集快照 @ ${new Date().toISOString()}\n` +
-    `DELETE FROM prompts;\nDELETE FROM sources;\n` +
+    `-- 纯 upsert（INSERT OR REPLACE），无 DELETE。\n` +
     promptsToSql(rows) +
     "\n" +
     sourcesMetaToSql(metas) +

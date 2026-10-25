@@ -28,6 +28,12 @@ jobs:
       - name: Split SQL into small batches
         run: node scripts/split-d1-sql.mjs
 
+      # 生产红线守卫：批次里若出现 DELETE / TRUNCATE / DROP，立即失败，绝不写库。
+      # （生成器已被改为纯 INSERT OR REPLACE，这里是第二道防线：CI 上任何一次
+      #   「先删后插」的改动都会被这一步拦下，而不是等到 D1 被清空才发现。）
+      - name: Guard: batches must not contain destructive SQL
+        run: node scripts/assert-no-destructive-sql.mjs .d1-batches
+
       - name: Apply batches to D1 (--remote)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -50,6 +56,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          # 未配置凭据时「Apply」已跳过写库，这里同样跳过校验（否则无凭据必然误报失败）
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN 未配置，跳过行数校验"
+            exit 0
+          fi
           CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d '[:space:]')"
           EXPECTED=$(node -e "console.log(JSON.parse(require('fs').readFileSync('data/prompts.json','utf8')).length)")
           # wrangler --json 输出为顶层数组：[{ "results": [{ "total": N }] }]
@@ -73,9 +84,20 @@ jobs:
               console.log(total);
             })")
           echo "数据集条数 = $EXPECTED | D1 实际条数 = $TOTAL"
-          if [ -z "$TOTAL" ] || [ "$TOTAL" != "$EXPECTED" ]; then
-            echo "✘ 行数不符：期望 $EXPECTED，实际 '$TOTAL'。请检查上方批次执行日志。原始返回（前 400 字符）："
+          if [ -z "$TOTAL" ]; then
+            echo "✘ 读不到 D1 行数（解析为空）。请检查上方批次执行日志。原始返回（前 400 字符）："
             printf '%s' "$RAW" | head -c 400
             exit 1
           fi
-          echo "✔ D1 已与数据集完全一致（$TOTAL 条）"
+          # 同步是「只追加 upsert、绝不删除」，所以判定标准是「D1 不少于数据集」：
+          #   少 = 有批次没写进去（截断/语法错）→ 失败；
+          #   多 = D1 里还有数据集之外的历史行 → 按红线保留，只告警不删。
+          if [ "$TOTAL" -lt "$EXPECTED" ] 2>/dev/null; then
+            echo "✘ D1 行数（$TOTAL）少于数据集（$EXPECTED）：有批次未写入，请检查上方批次执行日志。原始返回（前 400 字符）："
+            printf '%s' "$RAW" | head -c 400
+            exit 1
+          fi
+          if [ "$TOTAL" -gt "$EXPECTED" ] 2>/dev/null; then
+            echo "⚠ D1 比数据集多 $((TOTAL - EXPECTED)) 条（数据集之外的历史行）。同步只追加不删除，按设计保留；如需清理请人工按 id 处理。"
+          fi
+          echo "✔ 数据集 $EXPECTED 条已全部写入 D1（D1 共 $TOTAL 条）"

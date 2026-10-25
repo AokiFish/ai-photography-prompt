@@ -2,7 +2,8 @@ node_modules/
 .next/
 .vercel/
 .wrangler/
-.d1-batches/   # sync 工作流临时拆批产物，勿提交
+# sync 工作流临时拆批产物，勿提交（注意：.gitignore 不支持行内注释，注释必须独占一行）
+.d1-batches/
 .dev.vars
 *.local
 .env*
