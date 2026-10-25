@@ -90,8 +90,21 @@ async function main() {
 
   const normalized = [...prmpt, ...lexica].map(normalizeItem);
   let added = 0;
+  let updated = 0;
   for (const n of normalized) {
-    if (byId.has(n.id)) continue;
+    const ex = byId.get(n.id);
+    if (ex) {
+      // 覆盖更新：用新采集的权威字段修正旧数据（重点是修正错把 abstract 当 prompt 的问题）。
+      // 源站给的 title/category/imageUrl 是权威值，新值非空即覆盖（不只空了才补），
+      // 这样历史条目也能被修正（如标题去掉 "— AI Photo Prompt · PRMPT" 后缀）；绝不删除条目。
+      if (n.promptText && n.promptText.trim()) ex.promptText = n.promptText;
+      if (n.negativePrompt && n.negativePrompt.trim()) ex.negativePrompt = n.negativePrompt;
+      if (n.category) ex.category = n.category;
+      if (n.imageUrl) ex.imageUrl = n.imageUrl;
+      if (n.title) ex.title = n.title;
+      updated++;
+      continue;
+    }
     if (n.imageUrl && byImg.has(n.imageUrl)) continue; // 同图只保留一条主记录
     byId.set(n.id, n);
     if (n.imageUrl) byImg.set(n.imageUrl, n);
@@ -100,7 +113,7 @@ async function main() {
   const all = [...byId.values()];
 
   console.log(
-    `✦ 采集完成：本轮 prmpt=${prmpt.length} lexica=${lexica.length} 新增=${added} 数据集总计=${all.length} （${((Date.now() - t0) / 1000).toFixed(1)}s）`
+    `✦ 采集完成：本轮 prmpt=${prmpt.length} lexica=${lexica.length} 新增=${added} 覆盖更新=${updated} 数据集总计=${all.length} （${((Date.now() - t0) / 1000).toFixed(1)}s）`
   );
 
   const metas = [

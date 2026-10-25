@@ -8,7 +8,10 @@
 //   1) 读 /sitemap.xml 拿到全站全部 /prompt/<slug> 链接（完整、稳定）；
 //   2) 逐个抓详情页（详情页是 SSR：<head> 含 og:image / og:title / og:description，
 //      正文含面包屑 /category/<key> 权威分类）；
-//   3) extractDetail 从详情页取 标题 / 提示词(og:description) / 配图 / 权威分类。
+//   3) extractDetail 从详情页取 标题 / 真实提示词 / 配图 / 权威分类。
+//      关键：详情页 og:description 只是「简单陈述」(abstract)，不是 prompt！
+//      真正的 prompt 在 "Prompt Transcript" 标题下的 <p class="font-mono ..."> 里
+//      （可能是 JSON 结构化提示词，也可能是纯文本提示词）。务必取它，不要取 abstract。
 // 这样 100% 覆盖所有分类（含 product），不依赖 Firebase、不依赖浏览器。
 // 分类「归一映射」交给 util.mjs 的 normalizeItem，本文件不擅自定分类。
 
@@ -21,31 +24,74 @@ function pick(re, html, group = 1) {
   return m ? m[group].trim() : "";
 }
 
+// 清洗文本：去标签、反转义 HTML 实体、去掉尾部 "View all →"（源站有时会挂在 prompt 块里）。
+function cleanText(s) {
+  return String(s)
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/View all\s*→?/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // 从详情页提取真实提示词 + 配图 + 标题 + 权威分类（面包屑 /category/<key>）。
 export function extractDetail(html) {
-  const ogDesc = pick(
-    /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i,
-    html
-  );
   const ogImage = pick(
     /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
     html
   );
-  const title =
-    pick(/<title>([^<]+)<\/title>/i, html) ||
-    pick(/<h1[^>]*>([^<]+)<\/h1>/i, html);
 
-  // 真实提示词：优先 <pre>/<code> 中含摄影关键词的块；否则回退 og:description
-  const blocks = [...html.matchAll(/<(pre|code)[^>]*>([\s\S]*?)<\/\1>/gi)].map(
-    (x) => x[2]
-  );
-  const longest = blocks.sort((a, b) => b.length - a.length)[0] || "";
-  const promptText = (
-    longest && longest.length > 40 ? longest : ogDesc
-  )
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 2000);
+  // 标题：优先 h1（干净），回退 <title>（去掉站点后缀 " — AI Photo Prompt · PRMPT"）
+  const h1 = pick(/<h1[^>]*>([^<]+)<\/h1>/i, html);
+  const rawTitle = h1 || pick(/<title>([^<]+)<\/title>/i, html);
+  const title = rawTitle
+    ? rawTitle
+        .replace(/\s*[—–-]\s*AI Photo Prompt\s*·\s*PRMPT.*$/i, "")
+        .replace(/\s*·\s*PRMPT.*$/i, "")
+        .trim()
+    : null;
+
+  // 真实提示词：详情页 "Prompt Transcript" 区块内的 <p class="font-mono ...">。
+  // 这是源站真正的 prompt——可能是 JSON 结构化提示词，也可能是纯文本提示词。
+  // 切勿用 og:description / abstract 当 prompt（那是「简单陈述」）。
+  let promptText = null;
+  let negativePrompt = null;
+  const labelIdx = html.indexOf("Prompt Transcript");
+  if (labelIdx >= 0) {
+    const after = html.slice(labelIdx);
+    const m = after.match(/<p class="font-mono[^"]*"[^>]*>([\s\S]*?)<\/p>/);
+    if (m) {
+      const raw = cleanText(m[1]);
+      const s = raw.indexOf("{");
+      const e = raw.lastIndexOf("}");
+      if (s >= 0 && e > s) {
+        // 结构化 JSON prompt：美化存储，并抽取 negative_prompt
+        try {
+          const obj = JSON.parse(raw.slice(s, e + 1));
+          promptText = JSON.stringify(obj, null, 2);
+          if (Array.isArray(obj.negative_prompt) && obj.negative_prompt.length) {
+            negativePrompt = obj.negative_prompt.join(", ");
+          }
+        } catch {
+          promptText = raw;
+        }
+      } else if (raw) {
+        promptText = raw; // 纯文本 prompt
+      }
+    }
+  }
+  // 兜底：极少数详情页没有 Prompt Transcript 区块（结构变更）才回退 abstract
+  if (!promptText) {
+    const ogDesc = pick(
+      /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i,
+      html
+    );
+    if (ogDesc) promptText = ogDesc.slice(0, 2000);
+  }
 
   // 权威分类：面包屑 /category/<key>（详情页 SSR，最可靠；不扫描卡片全文乱猜）
   const catM = html.match(/href=["'][^"']*\/category\/([a-z0-9-]+)/i);
@@ -54,6 +100,7 @@ export function extractDetail(html) {
   return {
     title: title ? title.slice(0, 120) : null,
     promptText: promptText || null,
+    negativePrompt: negativePrompt || null,
     imageUrl: ogImage || null,
     category: detailCategory,
   };
@@ -148,7 +195,7 @@ export async function collectPrmpt({ limit = 0, delay = 1500, maxPages = 30, cat
         sourceUrl: s.sourceUrl,
         title: d.title,
         promptText: d.promptText,
-        negativePrompt: null,
+        negativePrompt: d.negativePrompt,
         category: cat,
         style: null,
         model: null,
