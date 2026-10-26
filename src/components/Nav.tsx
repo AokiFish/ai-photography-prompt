@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 const LINKS = [
   { href: "/", label: "首页", en: "Index" },
   { href: "/gallery", label: "图集", en: "Gallery" },
+  { href: "/builder", label: "构建器", en: "Builder" },
   { href: "/saved", label: "收藏", en: "Saved" },
   { href: "/about", label: "关于", en: "About" },
   { href: "/faq", label: "问答", en: "FAQ" },
