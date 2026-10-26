@@ -36,9 +36,10 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
       style={{ background: "rgba(8,8,8,.82)", backdropFilter: "blur(6px)", animation: "pmFade .25s ease" }}
     >
+      {/* 纵向单列（对齐源站弹窗）：顶部一张完整大图，下面纵向排内容，整体可滚 */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative grid max-h-[90vh] w-full max-w-[1000px] grid-cols-1 overflow-hidden border md:grid-cols-[1.05fr_1fr]"
+        className="relative max-h-[92vh] w-full max-w-[620px] overflow-hidden border"
         style={{ background: "var(--ink-2)", borderColor: "var(--line-strong)", animation: "pmPop .3s cubic-bezier(.2,.7,.2,1)" }}
       >
         <button
@@ -50,19 +51,20 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
           ×
         </button>
 
-        {/* 大图：contain 完整显示，不裁切/不拉伸 */}
-        <div className="relative aspect-[4/5] bg-ink md:aspect-auto md:h-[min(78vh,640px)]">
-          <PlateImage
-            src={prompt.imageUrl}
-            alt={prompt.title ?? prompt.abstract ?? ""}
-            styleKey={prompt.style}
-            bare
-            fit="contain"
-          />
-        </div>
+        <div className="max-h-[92vh] overflow-y-auto overscroll-contain">
+          {/* 大图：原图比例的完整大图，绝不裁成方形 */}
+          <div className="bg-ink" style={{ borderBottom: "1px solid var(--line)" }}>
+            <PlateImage
+              src={prompt.imageUrl}
+              alt={prompt.title ?? prompt.abstract ?? ""}
+              styleKey={prompt.style}
+              bare
+              fit="natural"
+            />
+          </div>
 
-        {/* 详情 */}
-        <div className="flex max-h-[90vh] flex-col overflow-y-auto p-6 sm:p-8">
+          {/* 详情 */}
+          <div className="flex flex-col p-6 sm:p-8">
           <div className="flex flex-wrap items-center gap-2">
             <span className="mono rounded" style={{ background: "rgba(237,231,218,.1)", color: "var(--paper-2)", padding: "4px 9px" }}>
               {catLabel ?? STYLE_LABELS[prompt.style]}
@@ -137,6 +139,7 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
                 打开完整网页 ↗
               </Link>
             )}
+          </div>
           </div>
         </div>
       </div>

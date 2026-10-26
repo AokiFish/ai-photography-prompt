@@ -50,12 +50,14 @@ export default async function PromptDetailPage({
         </Link>
       </div>
 
+      {/* 双栏用 flex：左栏大图撑出高度，右栏 min-h-0 + overflow-y-auto
+          → 右栏与图等高、内容超出时在**本栏内部**滚动，两栏底边严格对齐。 */}
       <div
-        className="grid grid-cols-1 items-start gap-8 md:grid-cols-[1.15fr_1fr]"
+        className="flex flex-col gap-8 md:flex-row md:gap-10"
         style={{ maxWidth: 1180, margin: "0 auto" }}
       >
         {/* 左：完整大图 —— 按原图比例、宽度撑满整栏，不裁切不拉伸；下面一行小号操作 */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 md:w-[54%] md:shrink-0">
           <div
             className="overflow-hidden border"
             style={{ background: "var(--ink-2)", borderColor: "var(--line-strong)" }}
@@ -74,8 +76,8 @@ export default async function PromptDetailPage({
           </div>
         </div>
 
-        {/* 右：详情（自然流，不锁高——单页要能完整看大图） */}
-        <div className="flex flex-col">
+        {/* 右：详情 —— 与大图等高，内容再多也只在本栏内滚（底部对齐，且不把页面撑长） */}
+        <div className="flex flex-col md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-2">
           <div className="flex flex-wrap items-center gap-2">
             {catLabel && (
               <span
