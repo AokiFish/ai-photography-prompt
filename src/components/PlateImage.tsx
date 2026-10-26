@@ -55,7 +55,11 @@ export function PlateImage({
   return (
     <div
       className={`relative w-full overflow-hidden ${fit === "natural" ? "" : "h-full"} ${className}`}
-      style={{ background: GRADIENTS[styleKey] }}
+      style={{
+        background: GRADIENTS[styleKey],
+        // natural 模式靠图片撑高度；图缺失/加载失败时给个兜底高度，避免整块塌成 0
+        minHeight: fit === "natural" && !showImg ? 420 : undefined,
+      }}
     >
       {showImg && (
         // eslint-disable-next-line @next/next/no-img-element

@@ -50,14 +50,14 @@ export default async function PromptDetailPage({
         </Link>
       </div>
 
-      {/* 双栏用 flex：左栏大图撑出高度，右栏 min-h-0 + overflow-y-auto
-          → 右栏与图等高、内容超出时在**本栏内部**滚动，两栏底边严格对齐。 */}
-      <div
-        className="flex flex-col gap-8 md:flex-row md:gap-10"
-        style={{ maxWidth: 1180, margin: "0 auto" }}
-      >
-        {/* 左：完整大图 —— 按原图比例、宽度撑满整栏，不裁切不拉伸；下面一行小号操作 */}
-        <div className="flex flex-col gap-4 md:w-[54%] md:shrink-0">
+      {/* 桌面端：图片高度 = 整块高度；右栏**绝对定位**贴在其右侧（inset-y-0），
+          高度因此严格等于图片高度 → 图底边与右栏底边（复制条）永远对齐。
+          右栏内部：正文 flex-1 可滚，复制条 shrink-0 钉在底部。
+          移动端：普通纵向堆叠，不做内部滚动。 */}
+      <div className="relative" style={{ maxWidth: 1180, margin: "0 auto" }}>
+        {/* 左：完整大图 —— 原图比例、宽度撑满整栏，不裁切不拉伸。
+            它的高度 = 整行高度，右栏据此对齐。 */}
+        <div className="md:w-[54%] md:shrink-0">
           <div
             className="overflow-hidden border"
             style={{ background: "var(--ink-2)", borderColor: "var(--line-strong)" }}
@@ -70,14 +70,11 @@ export default async function PromptDetailPage({
               fit="natural"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <CopyButton text={promptOut} label="复制提示词" />
-            <SaveButton id={prompt.id} />
-          </div>
         </div>
 
-        {/* 右：详情 —— 与大图等高，内容再多也只在本栏内滚（底部对齐，且不把页面撑长） */}
-        <div className="flex flex-col md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-2">
+        {/* 右：上=可滚动正文，下=固定在底部的复制条（与图底对齐，对齐源站） */}
+        <div className="mt-8 flex flex-col md:absolute md:inset-y-0 md:right-0 md:mt-0 md:w-[43%] md:min-h-0">
+          <div className="flex flex-col md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-2">
           <div className="flex flex-wrap items-center gap-2">
             {catLabel && (
               <span
@@ -177,7 +174,18 @@ export default async function PromptDetailPage({
               {prompt.width ? ` · ${prompt.width}×${prompt.height}` : ""}
             </p>
           )}
+          </div>
 
+          {/* 固定在右栏底部的复制条：与左侧图片底边对齐，正文在它上面独立滚动 */}
+          <div className="flex shrink-0 items-center gap-3 pt-5">
+            <CopyButton
+              text={promptOut}
+              label="Copy Prompt · 复制提示词"
+              copiedLabel="已复制 ✓"
+              className="flex-1 justify-center rounded-full border border-line-strong bg-ink-3 normal-case tracking-normal"
+            />
+            <SaveButton id={prompt.id} className="shrink-0" />
+          </div>
         </div>
       </div>
 
