@@ -224,7 +224,10 @@
         { "id": "3-2", "zh": "3:2 经典", "desc": "传统照片比例", "en": "3:2 classic photo format", "thumb": null },
         { "id": "16-9", "zh": "16:9 宽银幕", "desc": "横向宽画幅", "en": "16:9 widescreen format", "thumb": null },
         { "id": "9-16", "zh": "9:16 竖屏", "desc": "短视频 / 故事式", "en": "9:16 vertical story format", "thumb": null },
-        { "id": "21-9", "zh": "21:9 电影宽幅", "desc": "超宽电影感", "en": "21:9 cinemascope format", "thumb": null }
+        { "id": "21-9", "zh": "21:9 电影宽幅", "desc": "超宽电影感", "en": "21:9 cinemascope format", "thumb": null },
+        { "id": "4-3", "zh": "4:3 传统横屏", "desc": "适合普通照片、展示图", "en": "4:3 traditional landscape format", "thumb": null },
+        { "id": "3-4", "zh": "3:4 竖版", "desc": "适合人像、海报、手机端展示", "en": "3:4 vertical portrait format", "thumb": null },
+        { "id": "2-3", "zh": "2:3 单反比例", "desc": "单反照片比例，2:3 竖版", "en": "2:3 DSLR photo format", "thumb": null }
       ]
     }
   ],
