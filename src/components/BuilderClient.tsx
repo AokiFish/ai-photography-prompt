@@ -367,16 +367,15 @@ export function BuilderClient() {
             const on = active === c.id;
             const has = (sel[c.id] ?? []).length > 0;
             return (
+              // 与图集筛选一致：无边框胶囊，靠颜色表态（样式见 globals.css 的 .filter-chip）。
+              // ⚠ 只改样式：href 锚点跳转、滚动高亮（IntersectionObserver）、已选圆点都保持原样。
               <a
                 key={c.id}
                 href={`#cat-${c.id}`}
-                className={ONE_BTN}
-                style={{
-                  padding: "5px 11px",
-                  border: `1px solid ${on ? "var(--accent)" : "var(--line-strong)"}`,
-                  color: on ? "var(--accent)" : has ? "var(--paper-2)" : "var(--muted)",
-                  background: on ? "var(--accent-soft)" : "transparent",
-                }}
+                className="mono filter-chip"
+                data-active={on}
+                aria-current={on ? "true" : undefined}
+                style={{ padding: "5px 11px" }}
               >
                 {c.zh}
                 {has && <span style={{ color: "var(--accent)" }}>·</span>}
