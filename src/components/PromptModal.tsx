@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import type { Prompt } from "@/lib/types";
-import { STYLE_LABELS, STYLE_INTRO, PRO_CATEGORIES, resolveOwnSiteUrl } from "@/lib/types";
+import { STYLE_LABELS, STYLE_INTRO, PRO_CATEGORIES, resolveOwnSiteUrl, displayPromptText } from "@/lib/types";
 import { PlateImage } from "@/components/PlateImage";
 import { CopyButton } from "@/components/CopyButton";
 import { SaveButton } from "@/components/SaveButton";
@@ -50,13 +50,14 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
           ×
         </button>
 
-        {/* 大图 */}
-        <div className="relative min-h-[260px] bg-ink md:min-h-[560px]">
+        {/* 大图：按原图比例，不裁切/不拉伸 */}
+        <div className="relative bg-ink">
           <PlateImage
             src={prompt.imageUrl}
-            alt={prompt.title ?? prompt.promptText.slice(0, 40)}
+            alt={prompt.title ?? prompt.abstract ?? ""}
             styleKey={prompt.style}
             bare
+            natural
           />
         </div>
 
@@ -86,13 +87,13 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
           <div className="mt-6">
             <div className="flex items-center justify-between">
               <span className="lbl mono">完整提示词</span>
-              <CopyButton text={prompt.promptText} label="复制" />
+              <CopyButton text={displayPromptText(prompt.promptText)} label="复制" />
             </div>
             <p
               className="mt-2 rounded"
-              style={{ background: "var(--ink-3)", border: "1px solid var(--line)", padding: "14px 16px", fontFamily: "var(--font-mono),monospace", fontSize: 12.5, lineHeight: 1.75, color: "var(--paper-2)", whiteSpace: "pre-wrap" }}
+              style={{ background: "var(--ink-3)", border: "1px solid var(--line)", padding: "14px 16px", fontFamily: "var(--font-mono),monospace", fontSize: 12.5, lineHeight: 1.75, color: "var(--paper-2)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}
             >
-              {prompt.promptText}
+              {displayPromptText(prompt.promptText)}
             </p>
           </div>
 

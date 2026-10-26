@@ -146,6 +146,22 @@ export function promptSlug(
   return slug;
 }
 
+/**
+ * 展示/复制用的提示词文本：**JSON 型提示词不格式化**。
+ * 源站存的就是一整串紧凑 JSON；我们之前采集时把它 `JSON.stringify(obj, null, 2)` 美化过，
+ * 详情页于是铺出几千字符的缩进块，和源站对不上、也没法读。
+ * 这里在**渲染与复制时**还原成紧凑单行——不改库里的数据，历史数据也立刻生效。
+ */
+export function displayPromptText(text: string): string {
+  const t = (text ?? "").trim();
+  if (!t || (t[0] !== "{" && t[0] !== "[")) return text ?? ""; // 纯文本提示词原样返回
+  try {
+    return JSON.stringify(JSON.parse(t));
+  } catch {
+    return text; // 解析失败（截断/非标准 JSON）就原样显示，绝不丢内容
+  }
+}
+
 /** 站内详情页 URL：每张图在自己站上的独立页面（图集「打开完整网页」的目标）。 */
 export function resolveOwnSiteUrl(
   p: Pick<Prompt, "id" | "sourceUrl">

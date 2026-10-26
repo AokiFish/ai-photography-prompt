@@ -161,6 +161,32 @@ export async function getPromptBySlug(slug: string): Promise<Prompt | null> {
   return SEED_PROMPTS.find((p) => promptSlug(p) === slug) ?? null;
 }
 
+/**
+ * 详情页底部的关联卡片（对齐源站的「More in <category>」与「Related prompts」）：
+ *   moreInCategory —— 同一专业分类的其他提示词
+ *   related        —— 排除上面这批后，按「同摄影语言 → 有共同标签」兜底推荐
+ * 都排除当前这条本身，并沿用已有的按图去重（同图只留一条主记录）。
+ */
+export async function getRelatedPrompts(
+  prompt: Prompt,
+  { moreLimit = 8, relatedLimit = 8 }: { moreLimit?: number; relatedLimit?: number } = {}
+): Promise<{ moreInCategory: Prompt[]; related: Prompt[] }> {
+  const all = await getPrompts();
+  const moreInCategory = prompt.category
+    ? all.filter((p) => p.id !== prompt.id && p.category === prompt.category).slice(0, moreLimit)
+    : [];
+
+  const used = new Set([prompt.id, ...moreInCategory.map((p) => p.id)]);
+  const sharesTag = (p: Prompt) => !!prompt.tags?.length && !!p.tags?.some((t) => prompt.tags?.includes(t));
+
+  const related = all
+    .filter((p) => !used.has(p.id))
+    .filter((p) => p.style === prompt.style || sharesTag(p))
+    .slice(0, relatedLimit);
+
+  return { moreInCategory, related };
+}
+
 export interface Facets {
   sources: { key: Source; count: number }[];
   styles: { key: StyleKey; count: number }[];

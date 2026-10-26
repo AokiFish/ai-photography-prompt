@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getPromptBySlug } from "@/lib/prompts";
-import { PRO_CATEGORIES, STYLE_LABELS, STYLE_INTRO } from "@/lib/types";
+import { getPromptBySlug, getRelatedPrompts } from "@/lib/prompts";
+import { PRO_CATEGORIES, STYLE_LABELS, STYLE_INTRO, displayPromptText } from "@/lib/types";
 import { PlateImage } from "@/components/PlateImage";
 import { CopyButton } from "@/components/CopyButton";
 import { SaveButton } from "@/components/SaveButton";
+import { GalleryClient } from "@/components/GalleryClient";
 
 export const dynamic = "force-dynamic";
 // D1 经 @cloudflare/next-on-pages 访问，必须在 edge runtime 内调用。
@@ -36,6 +37,10 @@ export default async function PromptDetailPage({
   if (!prompt) notFound();
 
   const catLabel = PRO_CATEGORIES[prompt.category ?? ""] ?? null;
+  // JSON 型提示词按源站原样紧凑显示（不缩进美化），复制也是同一份
+  const promptOut = displayPromptText(prompt.promptText);
+  // 底部关联卡片：同分类 + 相关推荐
+  const { moreInCategory, related } = await getRelatedPrompts(prompt);
 
   return (
     <div className="pad-x" style={{ paddingTop: "clamp(34px,6vh,60px)", paddingBottom: "clamp(60px,9vh,110px)" }}>
@@ -49,16 +54,17 @@ export default async function PromptDetailPage({
         className="grid grid-cols-1 gap-8 md:grid-cols-[1.05fr_1fr]"
         style={{ maxWidth: 1080, margin: "0 auto" }}
       >
-        {/* 大图 */}
+        {/* 大图：按原图比例显示，绝不裁切/拉伸（以前固定 620px 高会把图压变形） */}
         <div
-          className="relative min-h-[300px] overflow-hidden border md:min-h-[620px]"
+          className="self-start overflow-hidden border"
           style={{ background: "var(--ink-2)", borderColor: "var(--line-strong)" }}
         >
           <PlateImage
             src={prompt.imageUrl}
-            alt={prompt.title ?? prompt.promptText.slice(0, 40)}
+            alt={prompt.title ?? prompt.abstract ?? ""}
             styleKey={prompt.style}
             bare
+            natural
           />
         </div>
 
@@ -102,7 +108,7 @@ export default async function PromptDetailPage({
           <div className="mt-6">
             <div className="flex items-center justify-between">
               <span className="lbl mono">完整提示词</span>
-              <CopyButton text={prompt.promptText} label="复制" />
+              <CopyButton text={promptOut} label="复制" />
             </div>
             <p
               className="mt-2 rounded"
@@ -115,9 +121,10 @@ export default async function PromptDetailPage({
                 lineHeight: 1.75,
                 color: "var(--paper-2)",
                 whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
               }}
             >
-              {prompt.promptText}
+              {promptOut}
             </p>
           </div>
 
@@ -168,6 +175,33 @@ export default async function PromptDetailPage({
           </div>
         </div>
       </div>
+
+      {/* 同分类更多（对齐源站 "More in <category>"） */}
+      {moreInCategory.length > 0 && (
+        <section style={{ maxWidth: 1080, margin: "clamp(48px,7vh,80px) auto 0" }}>
+          <div className="kicker" style={{ marginBottom: 18 }}>
+            <span className="lbl mono">
+              更多{catLabel ?? "同类"} · More in {prompt.category}
+            </span>
+            <span className="rule" />
+            <Link href={`/gallery?category=${prompt.category}`} className="mono" style={{ color: "var(--faint)" }}>
+              查看全部 →
+            </Link>
+          </div>
+          <GalleryClient prompts={moreInCategory} />
+        </section>
+      )}
+
+      {/* 相关提示（同摄影语言 / 共同标签） */}
+      {related.length > 0 && (
+        <section style={{ maxWidth: 1080, margin: "clamp(40px,6vh,64px) auto 0" }}>
+          <div className="kicker" style={{ marginBottom: 18 }}>
+            <span className="lbl mono">相关提示 · Related prompts</span>
+            <span className="rule" />
+          </div>
+          <GalleryClient prompts={related} />
+        </section>
+      )}
     </div>
   );
 }
