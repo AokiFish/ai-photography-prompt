@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { Prompt } from "@/lib/types";
 import { STYLE_LABELS, STYLE_INTRO, PRO_CATEGORIES, resolveOwnSiteUrl, displayPromptText } from "@/lib/types";
@@ -9,6 +10,13 @@ import { CopyButton } from "@/components/CopyButton";
 import { SaveButton } from "@/components/SaveButton";
 
 export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () => void }) {
+  // ⚠ 用 **portal 挂到 document.body**：弹窗不再受任何祖先容器影响。
+  // 之前只提 z-index 仍被顶栏盖住，根源是它可能落在某个层叠上下文里（transform /
+  // overflow / z-index 的祖先都会新建一个），此时 z-500 只在那个上下文内部有效，
+  // 跟顶栏（z-300，在 root 上下文）根本不在同一层比较。挂到 body 就从根上解决。
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -27,21 +35,22 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
   // 徽标只显示**专业分类**（官方 12 类）；确实没有分类数据时才回退摄影风格。
   const catLabel = PRO_CATEGORIES[prompt.category ?? ""] ?? null;
 
-  return (
+  const modal = (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={prompt.title ?? "提示词详情"}
       onClick={onClose}
-      // ⚠ z-index 必须**高于**站点顶栏（Nav 是 z-[300]，颗粒叠层 .grain 是 z-400 但
-      // pointer-events:none 不吃点击），否则弹窗被 Header 盖住，连关闭的 × 都点不到。
-      className="fixed inset-0 z-[500] flex items-center justify-center p-4 sm:p-8"
+      // 挂到 body 后与顶栏同处 root 层叠上下文，z-500 > Nav 的 z-300，稳定压过它。
+      // （颗粒叠层 .grain 是 z-400，但 pointer-events:none，不吃点击）
+      // items-start：弹窗顶边恰好落在顶栏下沿（顶栏 64px），不再重叠
+      className="fixed inset-0 z-[500] flex items-start justify-center p-4 sm:p-8"
       style={{
         background: "rgba(8,8,8,.82)",
         backdropFilter: "blur(6px)",
         animation: "pmFade .25s ease",
-        // 整体上移留出顶栏高度，弹窗不会被压在 Header 底下
-        paddingTop: 84,
+        // 弹窗最高位 = 顶栏最低位（顶栏高 64px），两者不再互相覆盖
+        paddingTop: 64,
       }}
     >
       {/* 纵向单列（对齐源站弹窗）：顶部一张完整大图，下面纵向排内容，整体可滚 */}
@@ -52,7 +61,8 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
           background: "var(--ink-2)",
           borderColor: "var(--line-strong)",
           animation: "pmPop .3s cubic-bezier(.2,.7,.2,1)",
-          maxHeight: "calc(100vh - 124px)",
+          // 可用高度 = 视口 - 顶栏(64) - 上下留白
+          maxHeight: "calc(100vh - 64px - 48px)",
         }}
       >
         <button
@@ -64,7 +74,7 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
           ×
         </button>
 
-        <div className="overflow-y-auto overscroll-contain" style={{ maxHeight: "calc(100vh - 124px)" }}>
+        <div className="overflow-y-auto overscroll-contain" style={{ maxHeight: "calc(100vh - 64px - 48px)" }}>
           {/* 大图：原图比例的完整大图。
               ⚠ 这里**不允许**任何 aspect-ratio / 固定高度 / object-fit 限制
               ——用户明确要求完整大图，任何限定都会把图切成方形或裁掉。 */}
@@ -162,4 +172,7 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
       <style>{`@keyframes pmFade{from{opacity:0}to{opacity:1}}@keyframes pmPop{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}`}</style>
     </div>
   );
+
+  // portal 到 body：彻底摆脱祖先层叠上下文（SSR 首帧未挂载时返回 null）
+  return mounted ? createPortal(modal, document.body) : null;
 }
