@@ -134,30 +134,40 @@ export type BuilderDetails = {
 
 export const EMPTY_DETAILS: BuilderDetails = { details: "", action: "", env: "" };
 
+/** 右侧预览里「场景描述」为空时的占位符（与源站一致，提示用户这里该填主体）。 */
+export const SCENE_PLACEHOLDER = "[describe the scene]";
+
 /**
  * 把选择拼成一条自然语言英文提示词。
  *
- * 顺序按「摄影工作流」：先说画面里有什么（主题详情 → 动作姿势 → 环境），
- * 再说怎么拍的（风格 → 机身 → 镜头 → 光圈 → 景别 → 机位 → 光 → 色调
- * → 构图 → 质感细节 → 运动 → 表情 → 画幅），最后补 Realism 提示语。
+ * 顺序按「摄影工作流」：
+ *   1) 场景描述（左侧顶部大输入框，空则用 [describe the scene] 占位）
+ *   2) 主题详情 → 动作姿势 → 环境（More detail）
+ *   3) 怎么拍的：风格 → 机身 → 镜头 → 光圈 → 景别 → 机位 → 光 → 色调
+ *      → 构图 → 质感细节 → 运动 → 表情 → 画幅
+ *   4) Realism 提示语
  *
  * 开启 Realism mode 时额外返回一段「排除词包」作为负向提示词。
  */
 export function buildPrompt(
   sel: BuilderSelection,
   details: BuilderDetails = EMPTY_DETAILS,
-  realism = false
+  realism = false,
+  subject = ""
 ): { prompt: string; negative: string } {
   const take = (id: string) =>
     (sel[id] ?? [])
       .map((o) => optionById(id, o)?.en)
       .filter(Boolean) as string[];
 
-  const scene = [details.details, details.action, details.env]
+  const scene = subject.trim().replace(/\s+/g, " ");
+  const detailParts = [details.details, details.action, details.env]
     .map((s) => (s ?? "").trim().replace(/\s+/g, " "))
     .filter(Boolean);
 
-  const parts: string[] = [...scene];
+  const parts: string[] = [];
+  if (scene) parts.push(scene);
+  parts.push(...detailParts);
   parts.push(...take("style"));
   parts.push(...take("camera"));
   parts.push(...take("lens"));
@@ -173,9 +183,13 @@ export function buildPrompt(
   parts.push(...take("ratio"));
   if (realism) parts.push(REALISM_CUE);
 
+  if (!parts.length) return { prompt: "", negative: "" };
+  // 有其它选项但没写场景 → 用占位符顶上，让用户一眼看出提示词缺了「拍什么」。
+  if (!scene) parts.unshift(SCENE_PLACEHOLDER);
+
   const unique = [...new Set(parts)];
   return {
-    prompt: unique.length ? `${unique.join(", ")}.` : "",
+    prompt: `${unique.join(", ")}.`,
     negative: realism ? `Avoid: ${AVOID_PACK.join(", ")}.` : "",
   };
 }

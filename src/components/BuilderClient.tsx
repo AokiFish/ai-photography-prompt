@@ -5,6 +5,7 @@ import {
   BUILDER_CATEGORIES,
   BUILDER_PRESETS,
   EMPTY_DETAILS,
+  SCENE_PLACEHOLDER,
   buildPrompt,
   emptySelection,
   randomSelection,
@@ -19,19 +20,35 @@ import {
 } from "@/lib/builder";
 import { CopyButton } from "@/components/CopyButton";
 
-// 提示词构建器：左边选视觉项（含预设 / 更多细节 / Realism mode），右边实时出提示词。
+// 提示词构建器：顶部写「画面里有什么」，下面点亮视觉项，右侧实时拼出提示词。
 // 每个类目都是一个锚点区块（#cat-style … #cat-ratio），左侧索引与该导航联动。
 
 const ONE_BTN = "mono rounded inline-flex items-center justify-center gap-2 cursor-pointer transition-all duration-200";
 
 const DETAIL_FIELDS: { key: keyof BuilderDetails; zh: string; en: string; placeholder: string }[] = [
-  { key: "details", zh: "主题详情", en: "Subject details", placeholder: "例：一位穿红色风衣的女性" },
-  { key: "action", zh: "动作与姿势", en: "Action and pose", placeholder: "例：侧身回望，手插口袋" },
-  { key: "env", zh: "环境", en: "Environment", placeholder: "例：雨后的东京街头，霓虹招牌" },
+  {
+    key: "details",
+    zh: "主题详情",
+    en: "Subject details",
+    placeholder: "年龄、外貌、衣着、发型、妆容。\n例：late 20s, curly red hair, oversized denim",
+  },
+  {
+    key: "action",
+    zh: "动作与姿势",
+    en: "Action and pose",
+    placeholder: "在做什么。\n例：laughing while turning away, one hand in her hair",
+  },
+  {
+    key: "env",
+    zh: "环境",
+    en: "Environment",
+    placeholder: "在哪里发生。\n例：an empty roadside gas station at night, wet asphalt",
+  },
 ];
 
 export function BuilderClient() {
   const [sel, setSel] = useState<BuilderSelection>(emptySelection);
+  const [subject, setSubject] = useState("");
   const [details, setDetails] = useState<BuilderDetails>(EMPTY_DETAILS);
   const [realism, setRealism] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -70,7 +87,10 @@ export function BuilderClient() {
     return () => io.disconnect();
   }, []);
 
-  const { prompt, negative } = useMemo(() => buildPrompt(sel, details, realism), [sel, details, realism]);
+  const { prompt, negative } = useMemo(
+    () => buildPrompt(sel, details, realism, subject),
+    [sel, details, realism, subject]
+  );
   const summary = useMemo(() => summaryOf(sel), [sel]);
   const pickedCount = summary.reduce((n, s) => n + s.opts.length, 0);
   const fullText = [prompt, negative].filter(Boolean).join("\n\n");
@@ -79,7 +99,6 @@ export function BuilderClient() {
     setSel(selectionFromPreset(p));
     setRealism(!!p.realism);
     setPresetId(p.id);
-    setMoreOpen(true);
   };
 
   const toggle = (cat: BuilderCategory, optId: string) => {
@@ -100,6 +119,7 @@ export function BuilderClient() {
 
   const resetAll = () => {
     setSel(emptySelection());
+    setSubject("");
     setDetails(EMPTY_DETAILS);
     setRealism(false);
     setPresetId(null);
@@ -113,118 +133,155 @@ export function BuilderClient() {
 
   return (
     <div className="pad-x grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
-      {/* ────────── 左：预设 + 更多细节 + 维度选择 ────────── */}
+      {/* ────────── 左：场景描述 + 预设 + 更多细节 + 维度选择 ────────── */}
       <div className="min-w-0">
-        {/* 预设 */}
-        <div className="rounded" style={{ background: "var(--ink-2)", border: "1px solid var(--line)", padding: 18 }}>
-          <div className="kicker" style={{ marginBottom: 14 }}>
-            <span className="lbl mono">预设 · PRESETS</span>
-            <span className="rule" />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {BUILDER_PRESETS.map((p) => {
-              const on = presetId === p.id;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => applyPreset(p)}
-                  className={ONE_BTN}
-                  style={{
-                    padding: "7px 12px",
-                    border: `1px solid ${on ? "var(--accent)" : "var(--line-strong)"}`,
-                    color: on ? "var(--accent)" : "var(--paper-2)",
-                    background: on ? "var(--accent-soft)" : "transparent",
-                  }}
-                >
-                  {p.zh}
-                  <span style={{ color: "var(--faint)", textTransform: "none" }}>{p.en}</span>
-                </button>
-              );
-            })}
-          </div>
+        <div className="rounded" style={{ background: "var(--ink-2)", border: "1px solid var(--line)" }}>
+          {/* 场景描述：写的内容就是右侧提示词的第一段 */}
+          <label className="block">
+            <span className="sr-only">画面里有什么</span>
+            <textarea
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="画面里有什么？例：An old woman selling flowers at a market at dawn"
+              rows={3}
+              className="w-full"
+              style={{
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                color: "var(--paper)",
+                padding: "18px 20px",
+                fontSize: 16,
+                lineHeight: 1.7,
+                resize: "vertical",
+                fontFamily: "inherit",
+              }}
+            />
+          </label>
 
-          {/* More detail（可展开） */}
+          {/* 预设：与场景描述同一张卡片，点一下整套铺开并同步到右侧提示词 */}
+          <div style={{ borderTop: "1px solid var(--line)", padding: "14px 16px 16px" }}>
+            <div className="flex items-start gap-3">
+              <span className="mono shrink-0" style={{ color: "var(--faint)", paddingTop: 8, width: 74 }}>
+                预设 Presets
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {BUILDER_PRESETS.map((p) => {
+                  const on = presetId === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => applyPreset(p)}
+                      className={ONE_BTN}
+                      style={{
+                        padding: "7px 12px",
+                        border: `1px solid ${on ? "var(--accent)" : "var(--line-strong)"}`,
+                        color: on ? "var(--accent)" : "var(--paper-2)",
+                        background: on ? "var(--accent-soft)" : "transparent",
+                        textTransform: "none",
+                      }}
+                    >
+                      {p.en}
+                      <span style={{ color: on ? "var(--accent)" : "var(--faint)" }}>{p.zh}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* More detail（左） + Realism mode（右） */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
           <button
             type="button"
             onClick={() => setMoreOpen((v) => !v)}
             className={ONE_BTN}
-            style={{ marginTop: 16, background: "none", border: "1px solid var(--line-strong)", color: "var(--muted)", padding: "6px 12px" }}
+            style={{
+              background: moreOpen ? "var(--accent-soft)" : "var(--ink-2)",
+              border: `1px solid ${moreOpen ? "var(--accent)" : "var(--line-strong)"}`,
+              color: moreOpen ? "var(--accent)" : "var(--paper-2)",
+              padding: "9px 14px",
+              textTransform: "none",
+            }}
           >
-            More detail {moreOpen ? "−" : "+"}
+            {moreOpen ? "−" : "+"} More detail <span style={{ color: "var(--faint)" }}>更多细节</span>
           </button>
 
-          {moreOpen && (
-            <div className="mt-4 flex flex-col gap-3">
-              {DETAIL_FIELDS.map((f) => (
-                <label key={f.key} className="flex flex-col gap-1.5">
-                  <span className="mono" style={{ color: "var(--faint)" }}>
-                    {f.zh} · {f.en}
-                  </span>
-                  <input
-                    value={details[f.key]}
-                    onChange={(e) => setDetails((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                    placeholder={f.placeholder}
-                    style={{
-                      background: "var(--ink-3)",
-                      border: "1px solid var(--line)",
-                      borderRadius: 3,
-                      color: "var(--paper)",
-                      padding: "9px 11px",
-                      fontSize: 13,
-                    }}
-                  />
-                </label>
-              ))}
-
-              {/* Realism mode */}
-              <button
-                type="button"
-                onClick={() => setRealism((v) => !v)}
-                className="flex items-center justify-between cursor-pointer"
-                style={{
-                  background: realism ? "var(--accent-soft)" : "var(--ink-3)",
-                  border: `1px solid ${realism ? "var(--accent)" : "var(--line)"}`,
-                  borderRadius: 3,
-                  padding: "11px 13px",
-                }}
-                aria-pressed={realism}
-              >
-                <span style={{ fontSize: 13.5, color: realism ? "var(--accent)" : "var(--paper-2)" }}>
-                  Realism mode
-                  <span className="block" style={{ fontSize: 11.5, color: "var(--faint)", marginTop: 3 }}>
-                    追加真实感提示语与排除词包
-                  </span>
-                </span>
-                <span
-                  aria-hidden
-                  style={{
-                    width: 34,
-                    height: 18,
-                    borderRadius: 999,
-                    background: realism ? "var(--accent)" : "var(--line-strong)",
-                    position: "relative",
-                    transition: "background .2s",
-                    flexShrink: 0,
-                  }}
-                >
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: 2,
-                      left: realism ? 18 : 2,
-                      width: 14,
-                      height: 14,
-                      borderRadius: 999,
-                      background: realism ? "#141414" : "var(--paper-2)",
-                      transition: "left .2s",
-                    }}
-                  />
-                </span>
-              </button>
+          <div className="flex items-center gap-3">
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontSize: 13.5, color: realism ? "var(--accent)" : "var(--paper-2)" }}>Realism mode</span>
+              <span style={{ display: "block", fontSize: 11.5, color: "var(--faint)", marginTop: 2 }}>
+                追加真实感提示与负向词包
+              </span>
             </div>
-          )}
+            <button
+              type="button"
+              onClick={() => setRealism((v) => !v)}
+              aria-pressed={realism}
+              aria-label="Realism mode"
+              className="cursor-pointer"
+              style={{
+                width: 46,
+                height: 24,
+                borderRadius: 999,
+                background: realism ? "var(--accent)" : "var(--line-strong)",
+                position: "relative",
+                transition: "background .2s",
+                border: "none",
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  top: 3,
+                  left: realism ? 25 : 3,
+                  width: 18,
+                  height: 18,
+                  borderRadius: 999,
+                  background: realism ? "#141414" : "var(--paper-2)",
+                  transition: "left .2s",
+                }}
+              />
+            </button>
+          </div>
         </div>
+
+        {/* 更多细节：三个文本框（与右侧提示词同步） */}
+        {moreOpen ? (
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {DETAIL_FIELDS.map((f) => (
+              <label key={f.key} className="flex flex-col gap-1.5">
+                <span style={{ fontSize: 13, color: "var(--paper-2)" }}>
+                  {f.en} <span style={{ color: "var(--faint)" }}>{f.zh}</span>
+                </span>
+                <textarea
+                  value={details[f.key]}
+                  onChange={(e) => setDetails((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                  placeholder={f.placeholder}
+                  rows={3}
+                  style={{
+                    background: "var(--ink-2)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 3,
+                    color: "var(--paper)",
+                    padding: "9px 11px",
+                    fontSize: 12.5,
+                    lineHeight: 1.7,
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                  }}
+                />
+              </label>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3" style={{ color: "var(--faint)", fontSize: 12.5, lineHeight: 1.8 }}>
+            只描述图片里的内容。任何语言都可以。
+          </p>
+        )}
 
         {/* 维度索引 */}
         <nav
@@ -300,7 +357,7 @@ export function BuilderClient() {
         </div>
       </div>
 
-      {/* ────────── 右：实时面板（Surprise me / Reset） ────────── */}
+      {/* ────────── 右：实时面板 ────────── */}
       <aside className="min-w-0">
         <div
           className="sticky flex flex-col gap-4 rounded"
@@ -324,8 +381,8 @@ export function BuilderClient() {
               border: "1px solid var(--line)",
               borderRadius: 4,
               padding: 14,
-              minHeight: 140,
-              maxHeight: 300,
+              minHeight: 150,
+              maxHeight: 320,
               overflowY: "auto",
             }}
           >
@@ -337,14 +394,38 @@ export function BuilderClient() {
                   lineHeight: 1.85,
                   color: "var(--paper-2)",
                   whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
                 }}
               >
-                {fullText}
+                {/* 场景描述占位符高亮，让用户一眼看见「这里要填拍什么」 */}
+                {prompt.startsWith(SCENE_PLACEHOLDER) ? (
+                  <>
+                    <mark
+                      style={{
+                        background: "var(--accent-soft)",
+                        color: "var(--accent)",
+                        borderRadius: 2,
+                        padding: "0 2px",
+                      }}
+                    >
+                      {SCENE_PLACEHOLDER}
+                    </mark>
+                    {prompt.slice(SCENE_PLACEHOLDER.length)}
+                  </>
+                ) : (
+                  prompt
+                )}
+                {negative && (
+                  <>
+                    {"\n\n"}
+                    <span style={{ color: "var(--faint)" }}>{negative}</span>
+                  </>
+                )}
               </p>
             ) : (
               <p className="mono" style={{ color: "var(--faint)", lineHeight: 1.9, textTransform: "none" }}>
-                还没有选择 — 点亮左边的选项开始拼装，<br />
-                或直接按一下「Surprise me」。
+                先在上面写一句「画面里有什么」，<br />
+                再点亮左边的选项——这里会实时长成一条提示词。
               </p>
             )}
           </div>
@@ -438,6 +519,7 @@ function OptionTile({
           />
         </span>
       )}
+      {/* 选中打勾：一眼看出「这条提示词用了哪些词」 */}
       {selected && (
         <span
           aria-hidden
@@ -445,12 +527,21 @@ function OptionTile({
             position: "absolute",
             top: thumb ? 16 : 10,
             right: thumb ? 16 : 11,
-            width: 7,
-            height: 7,
+            width: 18,
+            height: 18,
             borderRadius: 999,
             background: "var(--accent)",
+            color: "#141414",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 11,
+            fontWeight: 700,
+            lineHeight: 1,
           }}
-        />
+        >
+          ✓
+        </span>
       )}
       <span
         className="block"

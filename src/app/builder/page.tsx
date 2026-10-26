@@ -24,7 +24,7 @@ export default function BuilderPage() {
             提示词构建器
           </h1>
           <p style={{ maxWidth: "42em", color: "var(--muted)", fontSize: 15, lineHeight: 1.8 }}>
-            不必背参数。按「怎么拍出来」的顺序点亮你想到的东西——风格、机身、镜头、光位、构图、画幅——右侧会实时拼出一条可以直接丢给图像模型的英文提示词。不确定从哪开始，就按「Surprise me」。
+            先写一句「画面里有什么」，再点亮你想到的东西——风格、机身、镜头、光位、构图、画幅——右侧会实时拼出一条可以直接丢给图像模型的英文提示词，用到的词在左边都会打勾。懒得调参数，就按「Surprise me」或挑一个预设。
           </p>
         </Reveal>
       </div>
