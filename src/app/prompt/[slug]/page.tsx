@@ -54,9 +54,9 @@ export default async function PromptDetailPage({
         className="grid grid-cols-1 gap-8 md:grid-cols-[1.05fr_1fr]"
         style={{ maxWidth: 1080, margin: "0 auto" }}
       >
-        {/* 大图：按原图比例显示，绝不裁切/拉伸（以前固定 620px 高会把图压变形） */}
+        {/* 大图：contain 完整显示不裁切；高度与右栏一致（底部对齐） */}
         <div
-          className="self-start overflow-hidden border"
+          className="aspect-[4/5] overflow-hidden border md:aspect-auto md:h-[calc(100vh-170px)]"
           style={{ background: "var(--ink-2)", borderColor: "var(--line-strong)" }}
         >
           <PlateImage
@@ -64,12 +64,12 @@ export default async function PromptDetailPage({
             alt={prompt.title ?? prompt.abstract ?? ""}
             styleKey={prompt.style}
             bare
-            natural
+            fit="contain"
           />
         </div>
 
-        {/* 详情 */}
-        <div className="flex flex-col">
+        {/* 详情：与图等高，内容超出时在**本栏内部**滚动（对齐源站） */}
+        <div className="flex flex-col md:h-[calc(100vh-170px)] md:overflow-y-auto md:pr-2">
           <div className="flex flex-wrap items-center gap-2">
             {catLabel && (
               <span
@@ -170,10 +170,34 @@ export default async function PromptDetailPage({
             </p>
           )}
 
-          <div className="mt-auto flex flex-wrap items-center gap-3 pt-6">
-            <SaveButton id={prompt.id} />
-          </div>
         </div>
+      </div>
+
+      {/* 底部大号复制条：往下拉看完就能直接复制（上方提示词标题旁的复制按钮保留） */}
+      <div
+        className="flex items-center gap-3"
+        style={{ maxWidth: 1080, margin: "20px auto 0" }}
+      >
+        <CopyButton
+          text={promptOut}
+          label="Copy Prompt · 复制提示词"
+          copiedLabel="已复制 ✓"
+          className="flex-1 justify-center"
+          style={{
+            background: "var(--ink-2)",
+            border: "1px solid var(--line-strong)",
+            borderRadius: 999,
+            padding: "16px 20px",
+            color: "var(--paper)",
+            fontSize: 14,
+            letterSpacing: 0,
+            textTransform: "none",
+          }}
+        />
+        <SaveButton
+          id={prompt.id}
+          className="shrink-0 justify-center"
+        />
       </div>
 
       {/* 同分类更多（对齐源站 "More in <category>"） */}

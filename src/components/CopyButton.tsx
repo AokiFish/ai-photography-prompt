@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { showToast } from "@/lib/toast";
 
 interface CopyButtonProps {
@@ -8,6 +8,8 @@ interface CopyButtonProps {
   label?: string;
   copiedLabel?: string;
   className?: string;
+  /** 额外样式（详情页底部的大号「Copy Prompt」按钮用） */
+  style?: CSSProperties;
 }
 
 export function CopyButton({
@@ -15,6 +17,7 @@ export function CopyButton({
   label = "复制",
   copiedLabel = "已复制",
   className = "",
+  style,
 }: CopyButtonProps) {
   const [done, setDone] = useState(false);
 
@@ -45,6 +48,7 @@ export function CopyButton({
       type="button"
       onClick={copy}
       className={`copy inline-flex items-center gap-2 ${done ? "done" : ""} ${className}`}
+      style={style}
       aria-label={label}
     >
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8">

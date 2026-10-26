@@ -23,11 +23,12 @@ interface PlateImageProps {
   className?: string;
   bare?: boolean; // 弹窗大图：不显示角落标签
   /**
-   * natural = 按图片**原始比例**显示（详情页大图用）。
-   * 默认 false 是「铺满容器 + object-cover」，那会把非容器比例的图片裁切/拉伸变形
-   * ——详情页曾经用固定 620px 高去装 4:5 / 16:9 的图，就是这个毛病。
+   * fit：图片如何适配容器。
+   *   cover（默认）= 铺满容器并裁切（图集卡片用，版面整齐）
+   *   contain      = 完整显示、剩余留白（详情页/弹窗大图用，**绝不裁切/拉伸**）
+   * 详情页过去用固定高度 + cover，把非 4:5 的图裁得变形，所以大图一律 contain。
    */
-  natural?: boolean;
+  fit?: "cover" | "contain";
 }
 
 // 有图显示图；无图或加载失败则回退到与风格对应的渐变占位（编辑式「印样」美学）。
@@ -38,19 +39,15 @@ export function PlateImage({
   label,
   className = "",
   bare = false,
-  natural = false,
+  fit = "cover",
 }: PlateImageProps) {
   const [errored, setErrored] = useState(false);
   const showImg = src && !errored;
 
   return (
     <div
-      className={`relative w-full overflow-hidden ${natural ? "" : "h-full"} ${className}`}
-      style={{
-        background: GRADIENTS[styleKey],
-        // natural 且图加载失败时给个兜底高度，避免占位块塌成 0
-        minHeight: natural && !showImg ? 320 : undefined,
-      }}
+      className={`relative h-full w-full overflow-hidden ${className}`}
+      style={{ background: GRADIENTS[styleKey] }}
     >
       {showImg && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -59,8 +56,7 @@ export function PlateImage({
           alt={alt}
           loading="lazy"
           onError={() => setErrored(true)}
-          // natural：宽度撑满、高度随原图比例，绝不裁切/拉伸
-          className={natural ? "block h-auto w-full" : "h-full w-full object-cover"}
+          className={fit === "contain" ? "h-full w-full object-contain" : "h-full w-full object-cover"}
         />
       )}
       {!showImg && !bare && (

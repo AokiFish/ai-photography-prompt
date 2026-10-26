@@ -50,14 +50,14 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
           ×
         </button>
 
-        {/* 大图：按原图比例，不裁切/不拉伸 */}
-        <div className="relative bg-ink">
+        {/* 大图：contain 完整显示，不裁切/不拉伸 */}
+        <div className="relative aspect-[4/5] bg-ink md:aspect-auto md:h-[min(78vh,640px)]">
           <PlateImage
             src={prompt.imageUrl}
             alt={prompt.title ?? prompt.abstract ?? ""}
             styleKey={prompt.style}
             bare
-            natural
+            fit="contain"
           />
         </div>
 
