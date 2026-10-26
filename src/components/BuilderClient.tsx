@@ -446,7 +446,15 @@ export function BuilderClient() {
             overscrollBehavior: "contain",
           }}
         >
-          <div className="flex flex-wrap gap-2">
+          {/* 标题行在最上：左边 LIVE 标签，右边已选数量（对齐 kadar 的 "N selected"） */}
+          <div className="flex items-center justify-between" style={{ flexShrink: 0 }}>
+            <span className="lbl mono">实时提示词 · LIVE</span>
+            <span className="mono" style={{ color: "var(--faint)", textTransform: "none" }}>
+              {pickedCount} selected · {pickedCount} 已选中
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-2" style={{ flexShrink: 0 }}>
             {BUILDER_MODELS.map((m) => {
               const on = model === m.id;
               return (
@@ -468,14 +476,9 @@ export function BuilderClient() {
               );
             })}
           </div>
-          <p style={{ fontSize: 11.5, color: "var(--faint)", lineHeight: 1.6, marginTop: -8 }}>{activeModel.note}</p>
-
-          <div className="flex items-center justify-between">
-            <span className="lbl mono">实时提示词 · LIVE</span>
-            <span className="mono" style={{ color: "var(--faint)" }}>
-              {pickedCount} 项
-            </span>
-          </div>
+          <p style={{ fontSize: 11.5, color: "var(--faint)", lineHeight: 1.6, marginTop: -8, flexShrink: 0 }}>
+            {activeModel.note}
+          </p>
 
           <div
             style={{
@@ -486,7 +489,9 @@ export function BuilderClient() {
               // ⚠ 这个框**不自己滚动**：文本自适应高度，生成多少就多长。
               // 全右栏只有面板一层滚动条（见外层 maxHeight + overflowY:auto）。
               // 不要再给它加 maxHeight / overflow，否则会多出一条滚动条（用户明确反对）。
+              // flexShrink:0 —— 面板限高时禁止被压缩，否则内容会溢出并盖住下面的「已选摘要」。
               minHeight: 150,
+              flexShrink: 0,
             }}
           >
             {rendered ? (
@@ -527,7 +532,7 @@ export function BuilderClient() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2" style={{ flexShrink: 0 }}>
             <button
               type="button"
               onClick={surprise}
@@ -549,7 +554,7 @@ export function BuilderClient() {
 
           {/* 摘要同样不自己滚动：交给整块面板那唯一的滚动条 */}
           {summary.length > 0 && (
-            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14 }}>
+            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14, flexShrink: 0 }}>
               <span className="lbl mono" style={{ color: "var(--faint)" }}>
                 已选摘要
               </span>
