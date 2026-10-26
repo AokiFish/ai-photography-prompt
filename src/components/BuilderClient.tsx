@@ -3,24 +3,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BUILDER_CATEGORIES,
+  BUILDER_MODELS,
   BUILDER_PRESETS,
   EMPTY_DETAILS,
+  REALISM_NOTE,
   SCENE_PLACEHOLDER,
-  buildPrompt,
+  buildSegments,
   emptySelection,
   randomSelection,
+  renderPrompt,
   selectionFromPreset,
   summaryOf,
   thumbUrl,
   type BuilderCategory,
   type BuilderDetails,
+  type BuilderModel,
   type BuilderOption,
   type BuilderPreset,
   type BuilderSelection,
 } from "@/lib/builder";
 import { CopyButton } from "@/components/CopyButton";
+import { showToast } from "@/lib/toast";
 
-// 提示词构建器：顶部写「画面里有什么」，下面点亮视觉项，右侧实时拼出提示词。
+// 提示词构建器：顶部写「画面里有什么」，下面点亮视觉项，右侧按模型实时出提示词。
 // 每个类目都是一个锚点区块（#cat-style … #cat-ratio），左侧索引与该导航联动。
 
 const ONE_BTN = "mono rounded inline-flex items-center justify-center gap-2 cursor-pointer transition-all duration-200";
@@ -53,6 +58,8 @@ export function BuilderClient() {
   const [realism, setRealism] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [presetId, setPresetId] = useState<string | null>(null);
+  const [model, setModel] = useState<BuilderModel["id"]>("nat");
+  const [refining, setRefining] = useState(false);
   const [active, setActive] = useState<string>(BUILDER_CATEGORIES[0].id);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -87,13 +94,14 @@ export function BuilderClient() {
     return () => io.disconnect();
   }, []);
 
-  const { prompt, negative } = useMemo(
-    () => buildPrompt(sel, details, realism, subject),
+  const { segments, negative } = useMemo(
+    () => buildSegments(sel, details, realism, subject),
     [sel, details, realism, subject]
   );
+  const rendered = useMemo(() => renderPrompt(model, segments, negative), [model, segments, negative]);
   const summary = useMemo(() => summaryOf(sel), [sel]);
   const pickedCount = summary.reduce((n, s) => n + s.opts.length, 0);
-  const fullText = [prompt, negative].filter(Boolean).join("\n\n");
+  const activeModel = BUILDER_MODELS.find((m) => m.id === model)!;
 
   const applyPreset = (p: BuilderPreset) => {
     setSel(selectionFromPreset(p));
@@ -129,6 +137,35 @@ export function BuilderClient() {
   const surprise = () => {
     setSel(randomSelection());
     setPresetId(null);
+  };
+
+  /** 用 AI 精炼：把场景描述（没有就整条提示词）交给大模型润色，结果写回场景框。 */
+  const refineWithAI = async () => {
+    if (refining) return;
+    const input = subject.trim() || rendered.replace(/\n+/g, " ").trim();
+    if (!input) {
+      showToast("先写点内容再精炼");
+      return;
+    }
+    setRefining(true);
+    try {
+      const res = await fetch("/api/refine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: input }),
+      });
+      const data = (await res.json()) as { text?: string; error?: string; detail?: string };
+      if (!res.ok || !data.text) {
+        showToast(data.error ? `精炼失败：${data.error}` : "精炼失败");
+        return;
+      }
+      setSubject(data.text.trim());
+      showToast("已用 AI 精炼");
+    } catch {
+      showToast("精炼失败：网络错误");
+    } finally {
+      setRefining(false);
+    }
   };
 
   return (
@@ -189,6 +226,32 @@ export function BuilderClient() {
                 })}
               </div>
             </div>
+
+            {/* 用 AI 精炼 */}
+            <div
+              className="mt-3 flex flex-wrap items-center justify-between gap-3"
+              style={{ borderTop: "1px solid var(--line)", paddingTop: 12 }}
+            >
+              <span style={{ fontSize: 12.5, color: "var(--faint)", lineHeight: 1.6 }}>
+                用大模型把这段描述润色成更地道的英文提示词
+              </span>
+              <button
+                type="button"
+                onClick={refineWithAI}
+                disabled={refining}
+                className={ONE_BTN}
+                style={{
+                  padding: "7px 13px",
+                  border: "1px solid var(--accent)",
+                  color: refining ? "var(--faint)" : "var(--accent)",
+                  background: refining ? "transparent" : "var(--accent-soft)",
+                  opacity: refining ? 0.7 : 1,
+                  textTransform: "none",
+                }}
+              >
+                {refining ? "精炼中…" : "✨ 用 AI 精炼"}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -248,6 +311,15 @@ export function BuilderClient() {
             </button>
           </div>
         </div>
+
+        {/* Realism mode 开启时的说明 */}
+        {realism && (
+          <p className="mt-3 rounded" style={{ background: "var(--accent-soft)", border: "1px solid var(--accent)", padding: "10px 13px", fontSize: 12.5, lineHeight: 1.7, color: "var(--paper-2)" }}>
+            {REALISM_NOTE.en}
+            <br />
+            <span style={{ color: "var(--accent)" }}>{REALISM_NOTE.zh}</span>
+          </p>
+        )}
 
         {/* 更多细节：三个文本框（与右侧提示词同步） */}
         {moreOpen ? (
@@ -357,7 +429,7 @@ export function BuilderClient() {
         </div>
       </div>
 
-      {/* ────────── 右：实时面板 ────────── */}
+      {/* ────────── 右：模型切换 + 实时提示词 ────────── */}
       <aside className="min-w-0">
         <div
           className="sticky flex flex-col gap-4 rounded"
@@ -368,6 +440,30 @@ export function BuilderClient() {
             padding: 20,
           }}
         >
+          <div className="flex flex-wrap gap-2">
+            {BUILDER_MODELS.map((m) => {
+              const on = model === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setModel(m.id)}
+                  className={ONE_BTN}
+                  style={{
+                    padding: "5px 10px",
+                    border: `1px solid ${on ? "var(--accent)" : "var(--line-strong)"}`,
+                    color: on ? "var(--accent)" : "var(--muted)",
+                    background: on ? "var(--accent-soft)" : "transparent",
+                    textTransform: "none",
+                  }}
+                >
+                  {m.en}
+                </button>
+              );
+            })}
+          </div>
+          <p style={{ fontSize: 11.5, color: "var(--faint)", lineHeight: 1.6, marginTop: -8 }}>{activeModel.note}</p>
+
           <div className="flex items-center justify-between">
             <span className="lbl mono">实时提示词 · LIVE</span>
             <span className="mono" style={{ color: "var(--faint)" }}>
@@ -386,7 +482,7 @@ export function BuilderClient() {
               overflowY: "auto",
             }}
           >
-            {fullText ? (
+            {rendered ? (
               <p
                 style={{
                   fontFamily: "var(--font-mono),monospace",
@@ -398,7 +494,7 @@ export function BuilderClient() {
                 }}
               >
                 {/* 场景描述占位符高亮，让用户一眼看见「这里要填拍什么」 */}
-                {prompt.startsWith(SCENE_PLACEHOLDER) ? (
+                {rendered.startsWith(SCENE_PLACEHOLDER) ? (
                   <>
                     <mark
                       style={{
@@ -410,16 +506,10 @@ export function BuilderClient() {
                     >
                       {SCENE_PLACEHOLDER}
                     </mark>
-                    {prompt.slice(SCENE_PLACEHOLDER.length)}
+                    {rendered.slice(SCENE_PLACEHOLDER.length)}
                   </>
                 ) : (
-                  prompt
-                )}
-                {negative && (
-                  <>
-                    {"\n\n"}
-                    <span style={{ color: "var(--faint)" }}>{negative}</span>
-                  </>
+                  rendered
                 )}
               </p>
             ) : (
@@ -447,7 +537,7 @@ export function BuilderClient() {
             >
               Reset
             </button>
-            {fullText && <CopyButton text={fullText} label="复制" />}
+            {rendered && <CopyButton text={rendered} label="复制" />}
           </div>
 
           {summary.length > 0 && (

@@ -149,47 +149,166 @@ export const SCENE_PLACEHOLDER = "[describe the scene]";
  *
  * 开启 Realism mode 时额外返回一段「排除词包」作为负向提示词。
  */
+/** Realism mode 的提示说明（开启时显示，中文在前英文在后）。 */
+export const REALISM_NOTE = {
+  en: "Realism mode pushes toward photography and fights the Anime style.",
+  zh: "写实模式更偏向摄影，反对动漫风格。",
+};
+
+// ──────────── 输出模型：同一套选择，按不同模型的口味排版 ────────────
+export interface BuilderModel {
+  id: "mj" | "sd" | "nat" | "nb";
+  zh: string;
+  en: string;
+  note: string;
+}
+
+export const BUILDER_MODELS: BuilderModel[] = [
+  { id: "mj", zh: "Midjourney", en: "Midjourney", note: "短语优先，最重要的放最前，参数放末尾。" },
+  { id: "sd", zh: "Stable Diffusion", en: "Stable Diffusion", note: "标签式主体 + 独立负向提示词，附 SDXL 尺寸。" },
+  { id: "nat", zh: "自然语言", en: "Natural language", note: "给 GPT Image / Imagen / Flux 这类模型的通顺英文句子。" },
+  { id: "nb", zh: "Nano Banana Pro", en: "Nano Banana Pro", note: "带标签的结构化简报，适合它的思考步骤。" },
+];
+
+/** 各画幅对应的 --ar 参数与 SDXL 建议尺寸。 */
+const RATIO_AR: Record<string, string> = {
+  "1-1": "1:1",
+  "4-5": "4:5",
+  "3-2": "3:2",
+  "16-9": "16:9",
+  "9-16": "9:16",
+  "21-9": "21:9",
+};
+const RATIO_SIZE: Record<string, string> = {
+  "1-1": "1024×1024",
+  "4-5": "896×1152",
+  "3-2": "1216×832",
+  "16-9": "1344×768",
+  "9-16": "768×1344",
+  "21-9": "1536×640",
+};
+
+/** 分段结构：把「选了什么」按维度拆开，供不同模型各自排版。 */
+export interface BuilderSegments {
+  /** 场景描述；未填且有其内容时为 [describe the scene] 占位符 */
+  subject: string;
+  /** More detail 三项：主题详情 / 动作姿势 / 环境 */
+  details: string[];
+  /** 各摄影维度的英文短语（键 = 维度 id） */
+  byCat: Record<string, string[]>;
+  /** Realism 提示语（开启时才有） */
+  realism: string[];
+  /** 画幅 id（mj / sd 用来算参数与尺寸） */
+  ratioId: string | null;
+}
+
+const DETAIL_LABELS = { details: "details", action: "action", env: "env" } as const;
+
+/** 把当前状态拆成分段（不排版），供 renderPrompt 按模型渲染。 */
+export function buildSegments(
+  sel: BuilderSelection,
+  details: BuilderDetails = EMPTY_DETAILS,
+  realism = false,
+  subject = ""
+): { segments: BuilderSegments; negative: string } {
+  const byCat: Record<string, string[]> = {};
+  for (const c of BUILDER_CATEGORIES) {
+    if (c.id === "ratio") continue;
+    const vals = (sel[c.id] ?? [])
+      .map((id) => optionById(c.id, id)?.en)
+      .filter(Boolean) as string[];
+    if (vals.length) byCat[c.id] = vals;
+  }
+
+  const detailList = [details.details, details.action, details.env]
+    .map((s) => (s ?? "").trim().replace(/\s+/g, " "))
+    .filter(Boolean);
+
+  const scene = subject.trim().replace(/\s+/g, " ");
+  const ratioId = (sel.ratio ?? [])[0] ?? null;
+  const hasOther = detailList.length > 0 || Object.keys(byCat).length > 0 || realism;
+
+  return {
+    segments: {
+      subject: scene || (hasOther ? SCENE_PLACEHOLDER : ""),
+      details: detailList,
+      byCat,
+      realism: realism ? [REALISM_CUE] : [],
+      ratioId,
+    },
+    negative: realism ? AVOID_PACK.join(", ") : "",
+  };
+}
+
+/** 按模型排版：mj 带 --ar/--no，sd 分正负两段 + 尺寸，nb 是带标签的简报。 */
+export function renderPrompt(model: BuilderModel["id"], seg: BuilderSegments, negative: string): string {
+  const flat = [seg.subject, ...seg.details, ...Object.values(seg.byCat).flat(), ...seg.realism].filter(Boolean);
+  const unique = [...new Set(flat)];
+  if (!unique.length) return "";
+
+  const ratioKey = seg.ratioId ?? "";
+
+  if (model === "mj") {
+    const head = unique.join(", ");
+    const ar = RATIO_AR[ratioKey] ? ` --ar ${RATIO_AR[ratioKey]}` : "";
+    const no = negative ? ` --no ${negative}` : "";
+    return `${head}.${ar}${no}`;
+  }
+
+  if (model === "sd") {
+    const lines = [`Prompt: ${unique.join(", ")}.`];
+    if (negative) lines.push("", `Negative prompt: ${negative}.`);
+    if (RATIO_SIZE[ratioKey]) lines.push("", `Size: ${RATIO_SIZE[ratioKey]}`);
+    return lines.join("\n");
+  }
+
+  if (model === "nb") {
+    const label: Record<string, string> = {
+      details: "Subject details",
+      action: "Action and pose",
+      env: "Environment",
+      style: "Style",
+      camera: "Camera",
+      expr: "Expression",
+      shot: "Shot size",
+      angle: "Angle",
+      lens: "Lens",
+      aperture: "Depth of field",
+      motion: "Motion",
+      light: "Lighting",
+      texture: "Detail and texture",
+      mood: "Palette",
+      comp: "Composition",
+      ratio: "Aspect ratio",
+      realism: "Realism",
+    };
+    const lines = [`Subject: ${seg.subject}`];
+    seg.details.forEach((v, i) => {
+      const key = Object.values(DETAIL_LABELS)[i] ?? `detail${i}`;
+      lines.push(`${label[key] ?? key}: ${v}`);
+    });
+    for (const c of BUILDER_CATEGORIES) {
+      if (c.id === "ratio") continue;
+      const vals = seg.byCat[c.id];
+      if (vals?.length) lines.push(`${label[c.id] ?? c.id}: ${vals.join(", ")}`);
+    }
+    if (seg.realism.length) lines.push("Realism: on");
+    if (ratioKey) lines.push(`Aspect ratio: ${RATIO_AR[ratioKey] ?? ratioKey}`);
+    if (negative) lines.push(`Avoid: ${negative}`);
+    return lines.filter((l) => !/:\s*$/.test(l)).join("\n");
+  }
+
+  // nat：通顺的英文句子
+  return `${unique.join(", ")}.${negative ? `\n\nAvoid: ${negative}.` : ""}`;
+}
+
+/** 兼容旧调用：默认按「自然语言」渲染。 */
 export function buildPrompt(
   sel: BuilderSelection,
   details: BuilderDetails = EMPTY_DETAILS,
   realism = false,
   subject = ""
 ): { prompt: string; negative: string } {
-  const take = (id: string) =>
-    (sel[id] ?? [])
-      .map((o) => optionById(id, o)?.en)
-      .filter(Boolean) as string[];
-
-  const scene = subject.trim().replace(/\s+/g, " ");
-  const detailParts = [details.details, details.action, details.env]
-    .map((s) => (s ?? "").trim().replace(/\s+/g, " "))
-    .filter(Boolean);
-
-  const parts: string[] = [];
-  if (scene) parts.push(scene);
-  parts.push(...detailParts);
-  parts.push(...take("style"));
-  parts.push(...take("camera"));
-  parts.push(...take("lens"));
-  parts.push(...take("aperture"));
-  parts.push(...take("shot"));
-  parts.push(...take("angle"));
-  parts.push(...take("light"));
-  parts.push(...take("mood"));
-  parts.push(...take("comp"));
-  parts.push(...take("texture"));
-  parts.push(...take("motion"));
-  parts.push(...take("expr"));
-  parts.push(...take("ratio"));
-  if (realism) parts.push(REALISM_CUE);
-
-  if (!parts.length) return { prompt: "", negative: "" };
-  // 有其它选项但没写场景 → 用占位符顶上，让用户一眼看出提示词缺了「拍什么」。
-  if (!scene) parts.unshift(SCENE_PLACEHOLDER);
-
-  const unique = [...new Set(parts)];
-  return {
-    prompt: `${unique.join(", ")}.`,
-    negative: realism ? `Avoid: ${AVOID_PACK.join(", ")}.` : "",
-  };
+  const { segments, negative } = buildSegments(sel, details, realism, subject);
+  return { prompt: renderPrompt("nat", segments, negative), negative: negative ? `Avoid: ${negative}.` : "" };
 }
