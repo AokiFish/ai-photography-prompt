@@ -39,7 +39,7 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
       {/* 纵向单列（对齐源站弹窗）：顶部一张完整大图，下面纵向排内容，整体可滚 */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative max-h-[92vh] w-full max-w-[620px] overflow-hidden border"
+        className="relative max-h-[92vh] w-full max-w-[820px] overflow-hidden border"
         style={{ background: "var(--ink-2)", borderColor: "var(--line-strong)", animation: "pmPop .3s cubic-bezier(.2,.7,.2,1)" }}
       >
         <button
@@ -52,7 +52,9 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
         </button>
 
         <div className="max-h-[92vh] overflow-y-auto overscroll-contain">
-          {/* 大图：原图比例的完整大图，绝不裁成方形 */}
+          {/* 大图：原图比例的完整大图。
+              ⚠ 这里**不允许**任何 aspect-ratio / 固定高度 / object-fit 限制
+              ——用户明确要求完整大图，任何限定都会把图切成方形或裁掉。 */}
           <div className="bg-ink" style={{ borderBottom: "1px solid var(--line)" }}>
             <PlateImage
               src={prompt.imageUrl}
