@@ -57,7 +57,7 @@ export default async function PromptDetailPage({
       <div className="relative" style={{ maxWidth: 1180, margin: "0 auto" }}>
         {/* 左：完整大图 —— 原图比例、宽度撑满整栏，不裁切不拉伸。
             它的高度 = 整行高度，右栏据此对齐。 */}
-        <div className="md:w-[54%] md:shrink-0">
+        <div className="md:w-[50%] md:shrink-0">
           <div
             className="overflow-hidden border"
             style={{ background: "var(--ink-2)", borderColor: "var(--line-strong)" }}
@@ -73,7 +73,7 @@ export default async function PromptDetailPage({
         </div>
 
         {/* 右：上=可滚动正文，下=固定在底部的复制条（与图底对齐，对齐源站） */}
-        <div className="mt-8 flex flex-col md:absolute md:inset-y-0 md:right-0 md:mt-0 md:w-[43%] md:min-h-0">
+        <div className="mt-10 flex flex-col md:absolute md:inset-y-0 md:right-0 md:mt-0 md:w-[46%] md:min-h-0">
           <div className="flex flex-col md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-2">
           <div className="flex flex-wrap items-center gap-2">
             {catLabel && (
@@ -110,20 +110,21 @@ export default async function PromptDetailPage({
           </div>
 
           {/* 完整提示词 */}
-          <div className="mt-6">
+          <div className="mt-8">
             <div className="flex items-center justify-between">
               <span className="lbl mono">完整提示词</span>
               <CopyButton text={promptOut} label="复制" />
             </div>
             <p
-              className="mt-2 rounded"
+              className="mt-3 rounded"
               style={{
                 background: "var(--ink-3)",
                 border: "1px solid var(--line)",
-                padding: "14px 16px",
+                // 留白：文字与框底要有足够空隙，别顶着边
+                padding: "18px 20px 22px",
                 fontFamily: "var(--font-mono),monospace",
                 fontSize: 12.5,
-                lineHeight: 1.75,
+                lineHeight: 1.9,
                 color: "var(--paper-2)",
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
@@ -134,7 +135,7 @@ export default async function PromptDetailPage({
           </div>
 
           {prompt.negativePrompt && (
-            <div className="mt-4">
+            <div className="mt-6">
               <span className="lbl mono" style={{ color: "var(--faint)" }}>反向提示词</span>
               <p
                 className="mt-2 rounded"
@@ -176,13 +177,14 @@ export default async function PromptDetailPage({
           )}
           </div>
 
-          {/* 固定在右栏底部的复制条：与左侧图片底边对齐，正文在它上面独立滚动 */}
-          <div className="flex shrink-0 items-center gap-3 pt-5">
+          {/* 固定在右栏底部的操作区：与左侧图片底边对齐，正文在它上面独立滚动。
+              按钮按内容宽度（不再拉长），与上方提示词框留出大间距。 */}
+          <div className="flex shrink-0 flex-wrap items-center gap-3 pt-8">
             <CopyButton
               text={promptOut}
               label="Copy Prompt · 复制提示词"
               copiedLabel="已复制 ✓"
-              className="flex-1 justify-center rounded-full border border-line-strong bg-ink-3 normal-case tracking-normal"
+              className="justify-center rounded-full border border-line-strong bg-ink-3 px-6 py-3 normal-case tracking-normal"
             />
             <SaveButton id={prompt.id} className="shrink-0" />
           </div>
