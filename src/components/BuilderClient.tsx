@@ -438,6 +438,9 @@ export function BuilderClient() {
             background: "var(--ink-2)",
             border: "1px solid var(--line-strong)",
             padding: 20,
+            // 整块面板不超过视口高度，避免被推到屏幕外（否则只能靠页面滚动才看得到底部）
+            maxHeight: "calc(100vh - 124px)",
+            overflowY: "auto",
           }}
         >
           <div className="flex flex-wrap gap-2">
@@ -477,9 +480,15 @@ export function BuilderClient() {
               border: "1px solid var(--line)",
               borderRadius: 4,
               padding: 14,
+              // 容器级滚动：占满面板剩余空间，滚动条**常驻**且能拖到容器底部。
+              // overflow-y 用 scroll（不是 auto）——auto 会在内容不溢出时隐藏滚动条，
+              // 用户就会以为「滚动条消失了 / 内容被截断」。
+              flex: "1 1 auto",
               minHeight: 150,
               maxHeight: 320,
-              overflowY: "auto",
+              overflowY: "scroll",
+              scrollbarGutter: "stable",
+              overscrollBehavior: "contain",
             }}
           >
             {rendered ? (
@@ -541,7 +550,16 @@ export function BuilderClient() {
           </div>
 
           {summary.length > 0 && (
-            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14 }}>
+            <div
+              style={{
+                borderTop: "1px solid var(--line)",
+                paddingTop: 14,
+                // 选满 13 个维度时摘要会很长，给它自己的滚动区，别把面板撑出视口
+                maxHeight: 220,
+                overflowY: "auto",
+                overscrollBehavior: "contain",
+              }}
+            >
               <span className="lbl mono" style={{ color: "var(--faint)" }}>
                 已选摘要
               </span>

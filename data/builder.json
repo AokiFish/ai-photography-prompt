@@ -3,14 +3,16 @@
   "thumbBase": "/thumbs/",
   "realismCue": "Real, unretouched photograph; true-to-life textures; natural imperfections; realistic shadows",
   "avoidPack": [
-    "no text",
-    "no logos",
-    "no watermark",
-    "no cartoon",
-    "no CGI look",
-    "no extra people",
-    "no extra fingers",
-    "no harsh light"
+    "cartoon",
+    "CGI",
+    "3D render",
+    "illustration",
+    "plastic skin",
+    "over-smoothed skin",
+    "distorted face",
+    "extra fingers",
+    "text",
+    "watermark"
   ],
   "categories": [
     {
