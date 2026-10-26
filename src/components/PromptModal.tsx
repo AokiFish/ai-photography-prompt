@@ -33,14 +33,27 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
       aria-modal="true"
       aria-label={prompt.title ?? "提示词详情"}
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
-      style={{ background: "rgba(8,8,8,.82)", backdropFilter: "blur(6px)", animation: "pmFade .25s ease" }}
+      // ⚠ z-index 必须**高于**站点顶栏（Nav 是 z-[300]，颗粒叠层 .grain 是 z-400 但
+      // pointer-events:none 不吃点击），否则弹窗被 Header 盖住，连关闭的 × 都点不到。
+      className="fixed inset-0 z-[500] flex items-center justify-center p-4 sm:p-8"
+      style={{
+        background: "rgba(8,8,8,.82)",
+        backdropFilter: "blur(6px)",
+        animation: "pmFade .25s ease",
+        // 整体上移留出顶栏高度，弹窗不会被压在 Header 底下
+        paddingTop: 84,
+      }}
     >
       {/* 纵向单列（对齐源站弹窗）：顶部一张完整大图，下面纵向排内容，整体可滚 */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative max-h-[92vh] w-full max-w-[820px] overflow-hidden border"
-        style={{ background: "var(--ink-2)", borderColor: "var(--line-strong)", animation: "pmPop .3s cubic-bezier(.2,.7,.2,1)" }}
+        className="relative w-full max-w-[820px] overflow-hidden border"
+        style={{
+          background: "var(--ink-2)",
+          borderColor: "var(--line-strong)",
+          animation: "pmPop .3s cubic-bezier(.2,.7,.2,1)",
+          maxHeight: "calc(100vh - 124px)",
+        }}
       >
         <button
           onClick={onClose}
@@ -51,7 +64,7 @@ export function PromptModal({ prompt, onClose }: { prompt: Prompt; onClose: () =
           ×
         </button>
 
-        <div className="max-h-[92vh] overflow-y-auto overscroll-contain">
+        <div className="overflow-y-auto overscroll-contain" style={{ maxHeight: "calc(100vh - 124px)" }}>
           {/* 大图：原图比例的完整大图。
               ⚠ 这里**不允许**任何 aspect-ratio / 固定高度 / object-fit 限制
               ——用户明确要求完整大图，任何限定都会把图切成方形或裁掉。 */}
