@@ -25,10 +25,11 @@ interface PlateImageProps {
   /**
    * fit：图片如何适配容器。
    *   cover（默认）= 铺满容器并裁切（图集卡片用，版面整齐）
-   *   contain      = 完整显示、剩余留白（详情页/弹窗大图用，**绝不裁切/拉伸**）
-   * 详情页过去用固定高度 + cover，把非 4:5 的图裁得变形，所以大图一律 contain。
+   *   contain      = 完整显示、剩余留白（有固定高度的弹窗大图用，**绝不裁切/拉伸**）
+   *   natural      = **按原图比例、宽度撑满、高度自适应**（详情页大图用）
+   *                  容器**不锁高**，图有多大就多大，绝不裁切/拉伸。
    */
-  fit?: "cover" | "contain";
+  fit?: "cover" | "contain" | "natural";
 }
 
 // 有图显示图；无图或加载失败则回退到与风格对应的渐变占位（编辑式「印样」美学）。
@@ -44,20 +45,21 @@ export function PlateImage({
   const [errored, setErrored] = useState(false);
   const showImg = src && !errored;
 
+  const imgClass =
+    fit === "natural"
+      ? "block h-auto w-full" // 原图比例：宽度撑满容器，高度自适应
+      : fit === "contain"
+        ? "h-full w-full object-contain"
+        : "h-full w-full object-cover";
+
   return (
     <div
-      className={`relative h-full w-full overflow-hidden ${className}`}
+      className={`relative w-full overflow-hidden ${fit === "natural" ? "" : "h-full"} ${className}`}
       style={{ background: GRADIENTS[styleKey] }}
     >
       {showImg && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt={alt}
-          loading="lazy"
-          onError={() => setErrored(true)}
-          className={fit === "contain" ? "h-full w-full object-contain" : "h-full w-full object-cover"}
-        />
+        <img src={src} alt={alt} loading="lazy" onError={() => setErrored(true)} className={imgClass} />
       )}
       {!showImg && !bare && (
         <div className="absolute inset-0 flex items-end p-4">

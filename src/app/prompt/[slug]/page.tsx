@@ -51,25 +51,31 @@ export default async function PromptDetailPage({
       </div>
 
       <div
-        className="grid grid-cols-1 gap-8 md:grid-cols-[1.05fr_1fr]"
-        style={{ maxWidth: 1080, margin: "0 auto" }}
+        className="grid grid-cols-1 items-start gap-8 md:grid-cols-[1.15fr_1fr]"
+        style={{ maxWidth: 1180, margin: "0 auto" }}
       >
-        {/* 大图：contain 完整显示不裁切；高度与右栏一致（底部对齐） */}
-        <div
-          className="aspect-[4/5] overflow-hidden border md:aspect-auto md:h-[calc(100vh-170px)]"
-          style={{ background: "var(--ink-2)", borderColor: "var(--line-strong)" }}
-        >
-          <PlateImage
-            src={prompt.imageUrl}
-            alt={prompt.title ?? prompt.abstract ?? ""}
-            styleKey={prompt.style}
-            bare
-            fit="contain"
-          />
+        {/* 左：完整大图 —— 按原图比例、宽度撑满整栏，不裁切不拉伸；下面一行小号操作 */}
+        <div className="flex flex-col gap-4">
+          <div
+            className="overflow-hidden border"
+            style={{ background: "var(--ink-2)", borderColor: "var(--line-strong)" }}
+          >
+            <PlateImage
+              src={prompt.imageUrl}
+              alt={prompt.title ?? prompt.abstract ?? ""}
+              styleKey={prompt.style}
+              bare
+              fit="natural"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <CopyButton text={promptOut} label="复制提示词" />
+            <SaveButton id={prompt.id} />
+          </div>
         </div>
 
-        {/* 详情：与图等高，内容超出时在**本栏内部**滚动（对齐源站） */}
-        <div className="flex flex-col md:h-[calc(100vh-170px)] md:overflow-y-auto md:pr-2">
+        {/* 右：详情（自然流，不锁高——单页要能完整看大图） */}
+        <div className="flex flex-col">
           <div className="flex flex-wrap items-center gap-2">
             {catLabel && (
               <span
@@ -173,36 +179,9 @@ export default async function PromptDetailPage({
         </div>
       </div>
 
-      {/* 底部大号复制条：往下拉看完就能直接复制（上方提示词标题旁的复制按钮保留） */}
-      <div
-        className="flex items-center gap-3"
-        style={{ maxWidth: 1080, margin: "20px auto 0" }}
-      >
-        <CopyButton
-          text={promptOut}
-          label="Copy Prompt · 复制提示词"
-          copiedLabel="已复制 ✓"
-          className="flex-1 justify-center"
-          style={{
-            background: "var(--ink-2)",
-            border: "1px solid var(--line-strong)",
-            borderRadius: 999,
-            padding: "16px 20px",
-            color: "var(--paper)",
-            fontSize: 14,
-            letterSpacing: 0,
-            textTransform: "none",
-          }}
-        />
-        <SaveButton
-          id={prompt.id}
-          className="shrink-0 justify-center"
-        />
-      </div>
-
       {/* 同分类更多（对齐源站 "More in <category>"） */}
       {moreInCategory.length > 0 && (
-        <section style={{ maxWidth: 1080, margin: "clamp(48px,7vh,80px) auto 0" }}>
+        <section style={{ maxWidth: 1180, margin: "clamp(48px,7vh,80px) auto 0" }}>
           <div className="kicker" style={{ marginBottom: 18 }}>
             <span className="lbl mono">
               更多{catLabel ?? "同类"} · More in {prompt.category}
@@ -218,7 +197,7 @@ export default async function PromptDetailPage({
 
       {/* 相关提示（同摄影语言 / 共同标签） */}
       {related.length > 0 && (
-        <section style={{ maxWidth: 1080, margin: "clamp(40px,6vh,64px) auto 0" }}>
+        <section style={{ maxWidth: 1180, margin: "clamp(40px,6vh,64px) auto 0" }}>
           <div className="kicker" style={{ marginBottom: 18 }}>
             <span className="lbl mono">相关提示 · Related prompts</span>
             <span className="rule" />
