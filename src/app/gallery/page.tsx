@@ -73,7 +73,7 @@ export default async function GalleryPage({
           提示词画廊
         </h1>
         <p style={{ maxWidth: "42em", color: "var(--muted)", fontSize: 15, lineHeight: 1.8 }}>
-          按摄影语言与标签分类。每条都可直接复制、收藏，点击卡片查看大图与完整提示词。数据每日由采集器从 PRMPT 与 Lexica 更新至 Cloudflare D1。
+          精选 AI 摄影级照片和图片提示，按摄影语言与专业分类。每条都可直接复制、收藏，点击卡片查看大图与完整提示词。
         </p>
       </Reveal>
 
