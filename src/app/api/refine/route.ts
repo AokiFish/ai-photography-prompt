@@ -36,9 +36,18 @@ function pick(...vals: (string | undefined)[]): string {
 }
 
 export async function POST(req: Request) {
-  const apiKey = pick(process.env.REFINE_API_KEY, process.env.CUSTOM_API_KEY);
-  const rawBase = pick(process.env.REFINE_BASE_URL, process.env.CUSTOM_BASE_URL) || DEFAULT_BASE_URL;
-  const model = pick(process.env.REFINE_MODEL, process.env.CUSTOM_MODEL);
+  // 先解析请求体：客户端可以临时指定模型覆盖（对齐 hello-ai 的 chat 端点：
+  // 「有服务端配置就用服务端，否则用请求体里带的」）。
+  let reqBody: { text?: string; baseUrl?: string; apiKey?: string; model?: string } = {};
+  try {
+    reqBody = (await req.json()) as typeof reqBody;
+  } catch {
+    return Response.json({ error: "请求体不是合法 JSON" }, { status: 400 });
+  }
+
+  const apiKey = pick(reqBody.apiKey, process.env.REFINE_API_KEY, process.env.CUSTOM_API_KEY);
+  const rawBase = pick(reqBody.baseUrl, process.env.REFINE_BASE_URL, process.env.CUSTOM_BASE_URL) || DEFAULT_BASE_URL;
+  const model = pick(reqBody.model, process.env.REFINE_MODEL, process.env.CUSTOM_MODEL);
 
   if (!apiKey) {
     // 只回「变量是否存在」与解析后的地址，**绝不回显密钥本身**
@@ -75,14 +84,7 @@ export async function POST(req: Request) {
   }
   const finalModel = model || DEFAULT_MODEL;
 
-  let body: { text?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "请求体不是合法 JSON" }, { status: 400 });
-  }
-
-  const text = (body.text ?? "").trim().slice(0, 4000);
+  const text = (reqBody.text ?? "").trim().slice(0, 4000);
   if (!text) return Response.json({ error: "没有可精炼的内容" }, { status: 400 });
 
   // 地址容错：用户可能直接粘了完整 endpoint

@@ -23,6 +23,8 @@ import {
   type BuilderSelection,
 } from "@/lib/builder";
 import { CopyButton } from "@/components/CopyButton";
+import { RefineModelPicker } from "@/components/RefineModelPicker";
+import { SERVER_MODEL_ID, findModel } from "@/lib/refine-models";
 import { showToast } from "@/lib/toast";
 
 // 提示词构建器：顶部写「画面里有什么」，下面点亮视觉项，右侧按模型实时出提示词。
@@ -60,6 +62,7 @@ export function BuilderClient() {
   const [presetId, setPresetId] = useState<string | null>(null);
   const [model, setModel] = useState<BuilderModel["id"]>("nat");
   const [refining, setRefining] = useState(false);
+  const [modelId, setModelId] = useState<string>(SERVER_MODEL_ID);
   const [active, setActive] = useState<string>(BUILDER_CATEGORIES[0].id);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -149,10 +152,15 @@ export function BuilderClient() {
     }
     setRefining(true);
     try {
+      // 选了自定义模型就带上它的配置；选「服务端配置」则一个都不传，让服务端用环境变量
+      const m = modelId === SERVER_MODEL_ID ? null : findModel(modelId);
       const res = await fetch("/api/refine", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input }),
+        body: JSON.stringify({
+          text: input,
+          ...(m ? { baseUrl: m.baseUrl, model: m.model, apiKey: m.apiKey } : {}),
+        }),
       });
       const data = (await res.json()) as { text?: string; error?: string; detail?: string; hint?: string };
       if (!res.ok || !data.text) {
@@ -234,9 +242,13 @@ export function BuilderClient() {
               className="mt-3 flex flex-wrap items-center justify-between gap-3"
               style={{ borderTop: "1px solid var(--line)", paddingTop: 12 }}
             >
-              <span style={{ fontSize: 12.5, color: "var(--faint)", lineHeight: 1.6 }}>
-                用大模型把这段描述润色成更地道的英文提示词
-              </span>
+              <div className="flex flex-wrap items-center gap-3">
+                {/* 模型选择 / 添加（服务端默认 or 用户自己的模型） */}
+                <RefineModelPicker value={modelId} onChange={setModelId} />
+                <span style={{ fontSize: 12.5, color: "var(--faint)", lineHeight: 1.6 }}>
+                  用大模型把这段描述润色成更地道的英文提示词
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={refineWithAI}
