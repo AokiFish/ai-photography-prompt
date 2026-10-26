@@ -58,12 +58,25 @@ export function PromptCard({ prompt, onOpen }: { prompt: Prompt; onOpen?: () => 
         {catLabel && (
           <span className="mono" style={{ color: "var(--faint)" }}>{catLabel}</span>
         )}
-        {/* 卡片只显示「简短描述」（源站一句话陈述）。
+        {/* 卡片只显示「简短描述」（源站一句话陈述），**固定 2 行**。
             ⚠ 绝不在此铺 promptText：完整提示词长短悬殊（有的是 3000 字符 JSON），
             会让瀑布流卡片高度失控、排版很丑。完整 prompt 只在详情页/弹窗/复制按钮里用。
-            默认只给 2 行（line-clamp-2），用户明确不要更多。 */}
+            ⚠ 截断用**内联样式**而非 Tailwind 的 line-clamp-2 类：
+            工具类依赖构建产物/CSS 缓存，曾出现线上没生效（卡片铺了 6 行）的情况。
+            这里同时给 -webkit-line-clamp 与 maxHeight 双保险，任何浏览器都封顶 2 行。 */}
         {prompt.abstract && (
-          <p className="line-clamp-2" style={{ fontSize: 13, lineHeight: 1.75, color: "var(--paper-2)" }}>
+          <p
+            style={{
+              fontSize: 13,
+              lineHeight: 1.75,
+              color: "var(--paper-2)",
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: 2,
+              overflow: "hidden",
+              maxHeight: "calc(2 * 1.75 * 13px)", // 兜底：即使 -webkit-box 不生效也封顶 2 行
+            }}
+          >
             {prompt.abstract}
           </p>
         )}
