@@ -446,11 +446,11 @@ export function BuilderClient() {
             overscrollBehavior: "contain",
           }}
         >
-          {/* 标题行在最上：左边 LIVE 标签，右边已选数量（对齐 kadar 的 "N selected"） */}
+          {/* 标题行在最上：左边 LIVE 标签，右边已选数量（只要中文，不再写 selected） */}
           <div className="flex items-center justify-between" style={{ flexShrink: 0 }}>
             <span className="lbl mono">实时提示词 · LIVE</span>
             <span className="mono" style={{ color: "var(--faint)", textTransform: "none" }}>
-              {pickedCount} selected · {pickedCount} 已选中
+              {pickedCount} 已选中
             </span>
           </div>
 
