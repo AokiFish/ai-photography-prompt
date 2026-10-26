@@ -438,9 +438,12 @@ export function BuilderClient() {
             background: "var(--ink-2)",
             border: "1px solid var(--line-strong)",
             padding: 20,
-            // 整块面板不超过视口高度，避免被推到屏幕外（否则只能靠页面滚动才看得到底部）
+            // 全右栏**唯一**的滚动条就在这里：面板限高 + 自身滚动，
+            // 里面的提示词框/摘要都自适应高度、不各自滚动。
             maxHeight: "calc(100vh - 124px)",
             overflowY: "auto",
+            scrollbarGutter: "stable",
+            overscrollBehavior: "contain",
           }}
         >
           <div className="flex flex-wrap gap-2">
@@ -480,15 +483,10 @@ export function BuilderClient() {
               border: "1px solid var(--line)",
               borderRadius: 4,
               padding: 14,
-              // 容器级滚动：占满面板剩余空间，滚动条**常驻**且能拖到容器底部。
-              // overflow-y 用 scroll（不是 auto）——auto 会在内容不溢出时隐藏滚动条，
-              // 用户就会以为「滚动条消失了 / 内容被截断」。
-              flex: "1 1 auto",
+              // ⚠ 这个框**不自己滚动**：文本自适应高度，生成多少就多长。
+              // 全右栏只有面板一层滚动条（见外层 maxHeight + overflowY:auto）。
+              // 不要再给它加 maxHeight / overflow，否则会多出一条滚动条（用户明确反对）。
               minHeight: 150,
-              maxHeight: 320,
-              overflowY: "scroll",
-              scrollbarGutter: "stable",
-              overscrollBehavior: "contain",
             }}
           >
             {rendered ? (
@@ -549,17 +547,9 @@ export function BuilderClient() {
             {rendered && <CopyButton text={rendered} label="复制" />}
           </div>
 
+          {/* 摘要同样不自己滚动：交给整块面板那唯一的滚动条 */}
           {summary.length > 0 && (
-            <div
-              style={{
-                borderTop: "1px solid var(--line)",
-                paddingTop: 14,
-                // 选满 13 个维度时摘要会很长，给它自己的滚动区，别把面板撑出视口
-                maxHeight: 220,
-                overflowY: "auto",
-                overscrollBehavior: "contain",
-              }}
-            >
+            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14 }}>
               <span className="lbl mono" style={{ color: "var(--faint)" }}>
                 已选摘要
               </span>
