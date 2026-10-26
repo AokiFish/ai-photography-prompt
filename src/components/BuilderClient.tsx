@@ -10,6 +10,7 @@ import {
   randomSelection,
   selectionFromPreset,
   summaryOf,
+  thumbUrl,
   type BuilderCategory,
   type BuilderDetails,
   type BuilderOption,
@@ -400,6 +401,7 @@ function OptionTile({
   selected: boolean;
   onToggle: () => void;
 }) {
+  const thumb = thumbUrl(option);
   return (
     <button
       type="button"
@@ -410,15 +412,53 @@ function OptionTile({
         background: selected ? "var(--accent-soft)" : "var(--ink-2)",
         border: `1px solid ${selected ? "var(--accent)" : "var(--line)"}`,
         borderRadius: 3,
-        padding: "11px 13px",
+        padding: thumb ? 9 : "11px 13px",
+        position: "relative",
       }}
     >
+      {/* 效果参考图：让用户「看见」这个选项长什么样，而不是只念参数名 */}
+      {thumb && (
+        <span
+          className="block"
+          style={{
+            aspectRatio: "4 / 3",
+            overflow: "hidden",
+            borderRadius: 2,
+            marginBottom: 9,
+            background: "var(--ink-3)",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={thumb}
+            alt={option.zh}
+            loading="lazy"
+            decoding="async"
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        </span>
+      )}
+      {selected && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: thumb ? 16 : 10,
+            right: thumb ? 16 : 11,
+            width: 7,
+            height: 7,
+            borderRadius: 999,
+            background: "var(--accent)",
+          }}
+        />
+      )}
       <span
         className="block"
         style={{
           fontSize: 13.5,
           color: selected ? "var(--accent)" : "var(--paper-2)",
           lineHeight: 1.45,
+          paddingRight: 12,
         }}
       >
         {option.zh}
