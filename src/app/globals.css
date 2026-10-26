@@ -61,21 +61,32 @@ a {
   outline-offset: 3px;
 }
 
-/* 细滚动条 */
+/* 滚动条 —— 整体照抄 prmpt.it.com 的规则（实测其 CSS）：
+   ::-webkit-scrollbar width/height 11px
+   track #000、thumb 深色渐变 + 3px 描边、hover 变浅灰渐变、corner #000。
+   这里把 #000 换成我们的底色 var(--ink)，保证轨道与页面融为一体（视觉等价）。 */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
 }
 ::-webkit-scrollbar-track {
   background: var(--ink);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
+  background: linear-gradient(#262626, #3a3a3a);
   border-radius: 999px;
   border: 3px solid var(--ink);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
+  background: linear-gradient(#e2e2e2, #ababab);
+}
+::-webkit-scrollbar-corner {
+  background: var(--ink);
+}
+/* Firefox */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a3a var(--ink);
 }
 
 /* ============================================================
