@@ -132,6 +132,21 @@ function dedupeByImage(rows: Prompt[]): Prompt[] {
   return [...byImg.values(), ...noImg];
 }
 
+/**
+ * 取**全部**行（不做按图去重）——收藏页要用：
+ * 用户在图集里收藏的是 D1 里的真实 id，而 getPrompts() 会按 image_url 去重；
+ * 被去重掉的那条如果正好被收藏了，去重后就再也显示不出来。
+ */
+export async function getAllPrompts(): Promise<Prompt[]> {
+  const db = getDB();
+  if (db) {
+    const stmt = db.prepare("SELECT * FROM prompts");
+    const { results } = await stmt.all<PromptRow>();
+    if (results.length) return results.map(rowToPrompt);
+  }
+  return SEED_PROMPTS;
+}
+
 export async function getPrompt(id: string): Promise<Prompt | null> {
   const db = getDB();
   if (db) {
