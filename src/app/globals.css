@@ -195,6 +195,10 @@ html {
 .filter-chip:hover {
   color: var(--paper);
 }
+/* 按下立刻有反馈，不等服务端跳转完成 */
+.filter-chip:active {
+  opacity: 0.6;
+}
 .filter-chip[data-active="true"] {
   color: var(--accent);
 }

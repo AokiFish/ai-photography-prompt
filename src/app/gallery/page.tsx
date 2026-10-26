@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { getPrompts } from "@/lib/prompts";
 import { GalleryClient } from "@/components/GalleryClient";
@@ -28,11 +27,21 @@ function buildHref(current: SP, key: keyof SP, value?: string) {
 
 // 无边框胶囊：悬停变亮、选中变金色（不要用框——老气）
 // 样式全部交给 globals.css 的 .filter-chip，颜色不写死在行内，否则 hover 不生效。
+//
+// ⚠ 用**原生 <a> 而不是 Next <Link>**：筛选是靠服务端重新渲染的（query 变化），
+// 走 Link 一旦客户端路由/预取出问题就会「点了没反应」；原生 a 是浏览器级跳转，
+// 一定能换页。这里不需要 SPA 过渡，稳妥优先。
 function Chip({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
-    <Link href={href} className="mono filter-chip" data-active={active} style={{ padding: "6px 12px" }}>
+    <a
+      href={href}
+      className="mono filter-chip"
+      data-active={active}
+      aria-current={active ? "page" : undefined}
+      style={{ padding: "6px 12px" }}
+    >
       {children}
-    </Link>
+    </a>
   );
 }
 
