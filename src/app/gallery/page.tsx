@@ -26,19 +26,11 @@ function buildHref(current: SP, key: keyof SP, value?: string) {
   return qs ? `/gallery?${qs}` : "/gallery";
 }
 
+// 无边框胶囊：悬停变亮、选中变金色（不要用框——老气）
+// 样式全部交给 globals.css 的 .filter-chip，颜色不写死在行内，否则 hover 不生效。
 function Chip({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="mono rounded-full"
-      style={{
-        border: `1px solid ${active ? "var(--accent)" : "var(--line-strong)"}`,
-        color: active ? "var(--accent)" : "var(--muted)",
-        padding: "6px 13px",
-        background: active ? "var(--accent-soft)" : "transparent",
-        transition: "all .2s",
-      }}
-    >
+    <Link href={href} className="mono filter-chip" data-active={active} style={{ padding: "6px 12px" }}>
       {children}
     </Link>
   );

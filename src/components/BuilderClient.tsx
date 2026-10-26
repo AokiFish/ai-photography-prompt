@@ -597,7 +597,8 @@ function OptionTile({
       style={{
         background: selected ? "var(--accent-soft)" : "var(--ink-2)",
         border: `1px solid ${selected ? "var(--accent)" : "var(--line)"}`,
-        borderRadius: 3,
+        // 16px 圆角（与源站卡片一致）；内层缩略图小一圈（16 - 9 内边距 ≈ 8），转角才协调
+        borderRadius: 16,
         padding: thumb ? 9 : "11px 13px",
         position: "relative",
       }}
@@ -609,7 +610,7 @@ function OptionTile({
           style={{
             aspectRatio: "4 / 3",
             overflow: "hidden",
-            borderRadius: 2,
+            borderRadius: 8,
             marginBottom: 9,
             background: "var(--ink-3)",
           }}

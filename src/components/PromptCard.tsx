@@ -24,6 +24,8 @@ export function PromptCard({ prompt, onOpen }: { prompt: Prompt; onOpen?: () => 
         }
       }}
       className="group relative flex cursor-pointer flex-col border border-line bg-ink-2 transition-[transform,border-color] duration-500 ease-editorial hover:-translate-y-1 hover:border-line-strong"
+      // 圆角与源站一致：rounded-2xl = 1rem = 16px（实测 prmpt.it.com 卡片用 1rem）
+      style={{ borderRadius: 16, overflow: "hidden" }}
     >
       <div className="relative aspect-[4/5] overflow-hidden">
         <div className="absolute inset-0 transition-transform duration-700 ease-editorial group-hover:scale-[1.04]">

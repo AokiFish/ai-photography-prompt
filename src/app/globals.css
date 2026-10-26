@@ -174,6 +174,20 @@ a {
   }
 }
 
+/* 筛选胶囊：无边框，靠**颜色变化**表态（悬停变亮、选中变金），不要老式的框 */
+.filter-chip {
+  border: 1px solid transparent; /* 占位边框，避免悬停时尺寸跳动 */
+  background: transparent;
+  color: var(--muted);
+  transition: color 0.2s ease;
+}
+.filter-chip:hover {
+  color: var(--paper);
+}
+.filter-chip[data-active="true"] {
+  color: var(--accent);
+}
+
 /* 复制按钮反馈 */
 .copy.done {
   background: var(--accent);
