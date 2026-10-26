@@ -154,9 +154,11 @@ export function BuilderClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: input }),
       });
-      const data = (await res.json()) as { text?: string; error?: string; detail?: string };
+      const data = (await res.json()) as { text?: string; error?: string; detail?: string; hint?: string };
       if (!res.ok || !data.text) {
-        showToast(data.error ? `精炼失败：${data.error}` : "精炼失败");
+        // 把服务端给的诊断信息也说出来（只含变量名/状态，不含密钥）
+        const parts = [data.error ?? "精炼失败", data.hint, data.detail].filter(Boolean).join(" · ");
+        showToast(`精炼失败：${parts}`.slice(0, 120));
         return;
       }
       setSubject(data.text.trim());

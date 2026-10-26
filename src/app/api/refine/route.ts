@@ -19,8 +19,17 @@ const SYSTEM_PROMPT =
 export async function POST(req: Request) {
   const apiKey = (process.env.REFINE_API_KEY ?? "").trim();
   if (!apiKey) {
+    // 只回「变量是否存在」和解析后的地址/模型，**绝不回显密钥本身**：既好排查又不泄密。
     return Response.json(
-      { error: "未配置 REFINE_API_KEY（Pages 环境变量里加上大模型凭据即可启用）" },
+      {
+        error: "未配置 REFINE_API_KEY",
+        hint: "Pages 的环境变量添加后必须重新部署（Retry deploy）才会生效",
+        seen: {
+          REFINE_API_KEY: false,
+          REFINE_BASE_URL: !!process.env.REFINE_BASE_URL,
+          REFINE_MODEL: !!process.env.REFINE_MODEL,
+        },
+      },
       { status: 503 }
     );
   }
