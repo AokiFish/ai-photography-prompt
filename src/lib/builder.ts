@@ -243,6 +243,191 @@ export const BUILDER_CATEGORIES: BuilderCategory[] = [
   },
 ];
 
+/**
+ * 预设（Presets）：一套「已经调好的组合」，一键铺满各个维度。
+ * sel 里的键 = 维度 id，值 = 选项 id（多选维度给数组）。
+ * 参数取自 kadar.studio 的同名预设，ratio 用的是我们自己的 id（连字符写法）。
+ */
+export interface BuilderPreset {
+  id: string;
+  zh: string;
+  en: string;
+  realism?: boolean;
+  sel: Record<string, string | string[]>;
+}
+
+export const BUILDER_PRESETS: BuilderPreset[] = [
+  {
+    id: "cinematic-portrait",
+    zh: "电影肖像",
+    en: "Cinematic portrait",
+    realism: true,
+    sel: {
+      style: "cinematic",
+      expr: "thoughtful",
+      shot: "cu",
+      angle: "eye",
+      lens: "85",
+      aperture: "f14",
+      light: "rembrandt",
+      mood: "moody",
+      comp: "thirds",
+      texture: ["pores", "grain"],
+      ratio: "16-9",
+    },
+  },
+  {
+    id: "product-white",
+    zh: "白色背景产品",
+    en: "Product on white",
+    sel: {
+      style: "photo",
+      shot: "cu",
+      angle: "eye",
+      lens: "50",
+      aperture: "f11",
+      light: "softbox",
+      mood: "airy",
+      comp: "center",
+      ratio: "1-1",
+    },
+  },
+  {
+    id: "food-flat-lay",
+    zh: "食物俯拍平铺",
+    en: "Food flat lay",
+    sel: {
+      style: "photo",
+      angle: "bird",
+      lens: "50",
+      aperture: "f56",
+      light: "overcast",
+      mood: "warm",
+      comp: "negative",
+      ratio: "4-5",
+    },
+  },
+  {
+    id: "phone-flash",
+    zh: "手机闪光抓拍",
+    en: "Phone flash candid",
+    realism: true,
+    sel: {
+      style: "photo",
+      camera: "phoneflash",
+      expr: "laugh",
+      shot: "fs",
+      angle: "eye",
+      motion: "blur",
+      texture: ["grain", "imperfect"],
+      ratio: "9-16",
+    },
+  },
+  {
+    id: "sports",
+    zh: "运动瞬间",
+    en: "Sports moment",
+    realism: true,
+    sel: {
+      style: "photo",
+      camera: "mirrorless",
+      shot: "fs",
+      angle: "low",
+      lens: "200",
+      aperture: "f28",
+      motion: "freeze",
+      light: "hard",
+      texture: ["droplets", "sharp"],
+      ratio: "3-2",
+    },
+  },
+  {
+    id: "neon-street",
+    zh: "霓虹街头",
+    en: "Neon street",
+    sel: {
+      style: "cinestill",
+      shot: "ws",
+      angle: "low",
+      lens: "35",
+      aperture: "f14",
+      light: "neon",
+      mood: "teal",
+      comp: "leading",
+      ratio: "16-9",
+    },
+  },
+  {
+    id: "epic-landscape",
+    zh: "史诗风光",
+    en: "Epic landscape",
+    sel: {
+      style: "photo",
+      shot: "est",
+      angle: "aerial",
+      lens: "24",
+      aperture: "f11",
+      light: "golden",
+      mood: "vivid",
+      comp: "thirds",
+      ratio: "21-9",
+    },
+  },
+  {
+    id: "anime-scene",
+    zh: "动漫场景",
+    en: "Anime scene",
+    sel: {
+      style: "anime",
+      expr: "smile",
+      shot: "fs",
+      angle: "low",
+      light: "golden",
+      mood: "vivid",
+      comp: "diagonal",
+      ratio: "16-9",
+    },
+  },
+];
+
+/** 把预设铺成一份选择（未涉及的维度清空，保证「一键换一套」而不是叠加）。 */
+export function selectionFromPreset(preset: BuilderPreset): BuilderSelection {
+  const sel = emptySelection();
+  for (const c of BUILDER_CATEGORIES) {
+    const v = preset.sel[c.id];
+    if (v === undefined) continue;
+    sel[c.id] = Array.isArray(v) ? [...v] : [v];
+  }
+  return sel;
+}
+
+/** Realism mode 追加的真实感提示语。 */
+export const REALISM_CUE =
+  "Real, unretouched photograph; true-to-life textures; natural imperfections; realistic shadows";
+
+/** Realism mode 的「排除词包」（负向提示词）。 */
+export const AVOID_PACK = [
+  "no text",
+  "no logos",
+  "no watermark",
+  "no cartoon",
+  "no CGI look",
+  "no extra people",
+  "no extra fingers",
+  "no harsh light",
+];
+
+export type BuilderDetails = {
+  /** 主题详情 */
+  details: string;
+  /** 动作与姿势 */
+  action: string;
+  /** 环境 */
+  env: string;
+};
+
+export const EMPTY_DETAILS: BuilderDetails = { details: "", action: "", env: "" };
+
 export type BuilderSelection = Record<string, string[]>;
 
 /** 空选择（每类一个空数组）。 */
@@ -287,14 +472,26 @@ export function summaryOf(sel: BuilderSelection) {
 
 /**
  * 把选择拼成一条自然语言英文提示词。
- * 顺序按「摄影工作流」：气质 → 机身 → 镜头 → 光圈 → 景别 → 机位 → 光 → 色调
- * → 构图 → 质感细节 → 运动 → 表情 → 画幅。
+ *
+ * 顺序按「摄影工作流」：先说画面里有什么（主题详情 → 动作姿势 → 环境），
+ * 再说怎么拍的（风格 → 机身 → 镜头 → 光圈 → 景别 → 机位 → 光 → 色调
+ * → 构图 → 质感细节 → 运动 → 表情 → 画幅），最后补 Realism 提示语。
+ *
+ * 开启 Realism mode 时额外返回一段「排除词包」作为负向提示词。
  */
-export function buildPrompt(sel: BuilderSelection): string {
+export function buildPrompt(
+  sel: BuilderSelection,
+  details: BuilderDetails = EMPTY_DETAILS,
+  realism = false
+): { prompt: string; negative: string } {
   const take = (id: string) =>
     (sel[id] ?? []).map((o) => optionById(id, o)?.en).filter(Boolean) as string[];
 
-  const parts: string[] = [];
+  const scene = [details.details, details.action, details.env]
+    .map((s) => (s ?? "").trim().replace(/\s+/g, " "))
+    .filter(Boolean);
+
+  const parts: string[] = [...scene];
   parts.push(...take("style"));
   parts.push(...take("camera"));
   parts.push(...take("lens"));
@@ -308,9 +505,11 @@ export function buildPrompt(sel: BuilderSelection): string {
   parts.push(...take("motion"));
   parts.push(...take("expr"));
   parts.push(...take("ratio"));
+  if (realism) parts.push(REALISM_CUE);
 
-  if (!parts.length) return "";
-  // 电影机 + 画幅之间加 shot on 的组合在 GPU 模型里更好读：这里简单用逗号连接并去重。
   const unique = [...new Set(parts)];
-  return `${unique.join(", ")}.`;
+  return {
+    prompt: unique.length ? `${unique.join(", ")}.` : "",
+    negative: realism ? `Avoid: ${AVOID_PACK.join(", ")}.` : "",
+  };
 }

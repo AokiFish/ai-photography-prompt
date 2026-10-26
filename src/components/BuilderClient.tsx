@@ -3,23 +3,38 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BUILDER_CATEGORIES,
+  BUILDER_PRESETS,
+  EMPTY_DETAILS,
   buildPrompt,
   emptySelection,
   randomSelection,
+  selectionFromPreset,
   summaryOf,
   type BuilderCategory,
+  type BuilderDetails,
   type BuilderOption,
+  type BuilderPreset,
   type BuilderSelection,
 } from "@/lib/builder";
 import { CopyButton } from "@/components/CopyButton";
 
-// 提示词构建器：左边选视觉项，右边实时出一条英文提示词。
+// 提示词构建器：左边选视觉项（含预设 / 更多细节 / Realism mode），右边实时出提示词。
 // 每个类目都是一个锚点区块（#cat-style … #cat-ratio），左侧索引与该导航联动。
 
 const ONE_BTN = "mono rounded inline-flex items-center justify-center gap-2 cursor-pointer transition-all duration-200";
 
+const DETAIL_FIELDS: { key: keyof BuilderDetails; zh: string; en: string; placeholder: string }[] = [
+  { key: "details", zh: "主题详情", en: "Subject details", placeholder: "例：一位穿红色风衣的女性" },
+  { key: "action", zh: "动作与姿势", en: "Action and pose", placeholder: "例：侧身回望，手插口袋" },
+  { key: "env", zh: "环境", en: "Environment", placeholder: "例：雨后的东京街头，霓虹招牌" },
+];
+
 export function BuilderClient() {
   const [sel, setSel] = useState<BuilderSelection>(emptySelection);
+  const [details, setDetails] = useState<BuilderDetails>(EMPTY_DETAILS);
+  const [realism, setRealism] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [presetId, setPresetId] = useState<string | null>(null);
   const [active, setActive] = useState<string>(BUILDER_CATEGORIES[0].id);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -37,7 +52,7 @@ export function BuilderClient() {
     return () => window.removeEventListener("hashchange", go);
   }, []);
 
-  // 滚动时高亮左侧索引（用 IntersectionObserver，避免频繁 scroll 计算）
+  // 滚动时高亮左侧索引
   useEffect(() => {
     const els = BUILDER_CATEGORIES.map((c) => sectionRefs.current[c.id]).filter(Boolean) as HTMLElement[];
     if (!els.length || typeof IntersectionObserver === "undefined") return;
@@ -54,11 +69,20 @@ export function BuilderClient() {
     return () => io.disconnect();
   }, []);
 
-  const prompt = useMemo(() => buildPrompt(sel), [sel]);
+  const { prompt, negative } = useMemo(() => buildPrompt(sel, details, realism), [sel, details, realism]);
   const summary = useMemo(() => summaryOf(sel), [sel]);
   const pickedCount = summary.reduce((n, s) => n + s.opts.length, 0);
+  const fullText = [prompt, negative].filter(Boolean).join("\n\n");
+
+  const applyPreset = (p: BuilderPreset) => {
+    setSel(selectionFromPreset(p));
+    setRealism(!!p.realism);
+    setPresetId(p.id);
+    setMoreOpen(true);
+  };
 
   const toggle = (cat: BuilderCategory, optId: string) => {
+    setPresetId(null); // 手动改动后不再是「纯预设」
     setSel((prev) => {
       const cur = prev[cat.id] ?? [];
       if (cat.multi) {
@@ -68,14 +92,142 @@ export function BuilderClient() {
     });
   };
 
-  const clearCat = (catId: string) => setSel((prev) => ({ ...prev, [catId]: [] }));
+  const clearCat = (catId: string) => {
+    setPresetId(null);
+    setSel((prev) => ({ ...prev, [catId]: [] }));
+  };
+
+  const resetAll = () => {
+    setSel(emptySelection());
+    setDetails(EMPTY_DETAILS);
+    setRealism(false);
+    setPresetId(null);
+    setMoreOpen(false);
+  };
+
+  const surprise = () => {
+    setSel(randomSelection());
+    setPresetId(null);
+  };
 
   return (
     <div className="pad-x grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
-      {/* ────────── 左：类目索引 + 选择区 ────────── */}
+      {/* ────────── 左：预设 + 更多细节 + 维度选择 ────────── */}
       <div className="min-w-0">
+        {/* 预设 */}
+        <div className="rounded" style={{ background: "var(--ink-2)", border: "1px solid var(--line)", padding: 18 }}>
+          <div className="kicker" style={{ marginBottom: 14 }}>
+            <span className="lbl mono">预设 · PRESETS</span>
+            <span className="rule" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {BUILDER_PRESETS.map((p) => {
+              const on = presetId === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  className={ONE_BTN}
+                  style={{
+                    padding: "7px 12px",
+                    border: `1px solid ${on ? "var(--accent)" : "var(--line-strong)"}`,
+                    color: on ? "var(--accent)" : "var(--paper-2)",
+                    background: on ? "var(--accent-soft)" : "transparent",
+                  }}
+                >
+                  {p.zh}
+                  <span style={{ color: "var(--faint)", textTransform: "none" }}>{p.en}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* More detail（可展开） */}
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            className={ONE_BTN}
+            style={{ marginTop: 16, background: "none", border: "1px solid var(--line-strong)", color: "var(--muted)", padding: "6px 12px" }}
+          >
+            More detail {moreOpen ? "−" : "+"}
+          </button>
+
+          {moreOpen && (
+            <div className="mt-4 flex flex-col gap-3">
+              {DETAIL_FIELDS.map((f) => (
+                <label key={f.key} className="flex flex-col gap-1.5">
+                  <span className="mono" style={{ color: "var(--faint)" }}>
+                    {f.zh} · {f.en}
+                  </span>
+                  <input
+                    value={details[f.key]}
+                    onChange={(e) => setDetails((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                    placeholder={f.placeholder}
+                    style={{
+                      background: "var(--ink-3)",
+                      border: "1px solid var(--line)",
+                      borderRadius: 3,
+                      color: "var(--paper)",
+                      padding: "9px 11px",
+                      fontSize: 13,
+                    }}
+                  />
+                </label>
+              ))}
+
+              {/* Realism mode */}
+              <button
+                type="button"
+                onClick={() => setRealism((v) => !v)}
+                className="flex items-center justify-between cursor-pointer"
+                style={{
+                  background: realism ? "var(--accent-soft)" : "var(--ink-3)",
+                  border: `1px solid ${realism ? "var(--accent)" : "var(--line)"}`,
+                  borderRadius: 3,
+                  padding: "11px 13px",
+                }}
+                aria-pressed={realism}
+              >
+                <span style={{ fontSize: 13.5, color: realism ? "var(--accent)" : "var(--paper-2)" }}>
+                  Realism mode
+                  <span className="block" style={{ fontSize: 11.5, color: "var(--faint)", marginTop: 3 }}>
+                    追加真实感提示语与排除词包
+                  </span>
+                </span>
+                <span
+                  aria-hidden
+                  style={{
+                    width: 34,
+                    height: 18,
+                    borderRadius: 999,
+                    background: realism ? "var(--accent)" : "var(--line-strong)",
+                    position: "relative",
+                    transition: "background .2s",
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: 2,
+                      left: realism ? 18 : 2,
+                      width: 14,
+                      height: 14,
+                      borderRadius: 999,
+                      background: realism ? "#141414" : "var(--paper-2)",
+                      transition: "left .2s",
+                    }}
+                  />
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 维度索引 */}
         <nav
-          className="sticky flex flex-wrap gap-2 py-3"
+          className="sticky mt-6 flex flex-wrap gap-2 py-3"
           style={{ top: 64, zIndex: 60, background: "var(--ink)", borderBottom: "1px solid var(--line)" }}
           aria-label="构建维度"
         >
@@ -176,9 +328,17 @@ export function BuilderClient() {
               overflowY: "auto",
             }}
           >
-            {prompt ? (
-              <p style={{ fontFamily: "var(--font-mono),monospace", fontSize: 12.5, lineHeight: 1.85, color: "var(--paper-2)", whiteSpace: "pre-wrap" }}>
-                {prompt}
+            {fullText ? (
+              <p
+                style={{
+                  fontFamily: "var(--font-mono),monospace",
+                  fontSize: 12.5,
+                  lineHeight: 1.85,
+                  color: "var(--paper-2)",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {fullText}
               </p>
             ) : (
               <p className="mono" style={{ color: "var(--faint)", lineHeight: 1.9, textTransform: "none" }}>
@@ -191,7 +351,7 @@ export function BuilderClient() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setSel(randomSelection())}
+              onClick={surprise}
               className={ONE_BTN}
               style={{ background: "var(--accent)", color: "#141414", border: "1px solid var(--accent)", padding: "9px 14px" }}
             >
@@ -199,19 +359,13 @@ export function BuilderClient() {
             </button>
             <button
               type="button"
-              onClick={() => setSel(emptySelection())}
+              onClick={resetAll}
               className={ONE_BTN}
               style={{ border: "1px solid var(--line-strong)", color: "var(--muted)", padding: "9px 14px" }}
             >
               Reset
             </button>
-            {prompt && (
-              <CopyButton
-                text={prompt}
-                label="复制"
-                className="mono rounded"
-              />
-            )}
+            {fullText && <CopyButton text={fullText} label="复制" />}
           </div>
 
           {summary.length > 0 && (
