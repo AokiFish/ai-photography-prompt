@@ -179,7 +179,7 @@ export default async function PromptDetailPage({
 
           {/* 固定在右栏底部的操作区：与左侧图片底边对齐，正文在它上面独立滚动。
               按钮按内容宽度（不再拉长），与上方提示词框留出大间距。 */}
-          <div className="flex shrink-0 flex-wrap items-center gap-3 pt-8">
+          <div className="flex shrink-0 flex-wrap items-center justify-center gap-3 pt-8">
             <CopyButton
               text={promptOut}
               label="Copy Prompt · 复制提示词"
