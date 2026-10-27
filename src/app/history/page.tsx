@@ -46,7 +46,8 @@ export default async function HistoryPage() {
           text: r.prompt_text,
           source: r.source,
           createdAt: r.created_at,
-          openHref: slug ?? undefined,
+          // 必须是完整站内路径，否则在 /history 下会被当成相对路径解析成 /<slug> → 404
+          openHref: slug ? `/prompt/${slug}` : undefined,
         };
       });
     }
