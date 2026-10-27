@@ -26,6 +26,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { RefineModelPicker } from "@/components/RefineModelPicker";
 import { SERVER_MODEL_ID, findModel } from "@/lib/refine-models";
 import { showToast } from "@/lib/toast";
+import { useHistory } from "@/lib/history-client";
 
 // 提示词构建器：顶部写「画面里有什么」，下面点亮视觉项，右侧按模型实时出提示词。
 // 每个类目都是一个锚点区块（#cat-style … #cat-ratio），左侧索引与该导航联动。
@@ -64,6 +65,7 @@ export function BuilderClient() {
   const [refining, setRefining] = useState(false);
   const [modelId, setModelId] = useState<string>(SERVER_MODEL_ID);
   const [active, setActive] = useState<string>(BUILDER_CATEGORIES[0].id);
+  const { save } = useHistory();
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   // hash 变化（含首次进入 /builder/#cat-light）→ 滚动到对应区块并高亮
@@ -170,6 +172,8 @@ export function BuilderClient() {
         return;
       }
       setSubject(data.text.trim());
+      // 精炼产出的提示词自动存进历史（登录云端 / 未登录本机）
+      void save(data.text.trim(), { source: "refine" });
       showToast("已用 AI 精炼");
     } catch {
       showToast("精炼失败：网络错误");
@@ -562,7 +566,13 @@ export function BuilderClient() {
             >
               Reset
             </button>
-            {rendered && <CopyButton text={rendered} label="复制" />}
+            {rendered && (
+              <CopyButton
+                text={rendered}
+                label="复制"
+                onAfterCopy={() => void save(rendered, { source: "builder" })}
+              />
+            )}
           </div>
 
           {/* 摘要同样不自己滚动：交给整块面板那唯一的滚动条 */}

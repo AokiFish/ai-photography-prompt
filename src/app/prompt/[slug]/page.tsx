@@ -2,12 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPromptBySlug, getRelatedPrompts } from "@/lib/prompts";
-import { PRO_CATEGORIES, STYLE_LABELS, STYLE_INTRO, displayPromptText } from "@/lib/types";
+import { PRO_CATEGORIES, STYLE_LABELS, STYLE_INTRO, displayPromptText, promptSlug } from "@/lib/types";
 import { PlateImage } from "@/components/PlateImage";
-import { CopyButton } from "@/components/CopyButton";
+import { CopyWithHistory } from "@/components/CopyWithHistory";
 import { SaveButton } from "@/components/SaveButton";
 import { GalleryClient } from "@/components/GalleryClient";
-import { HistoryTracker } from "@/components/HistoryTracker";
 
 export const dynamic = "force-dynamic";
 // D1 经 @cloudflare/next-on-pages 访问，必须在 edge runtime 内调用。
@@ -45,8 +44,6 @@ export default async function PromptDetailPage({
 
   return (
     <div className="pad-x" style={{ paddingTop: "clamp(34px,6vh,60px)", paddingBottom: "clamp(60px,9vh,110px)" }}>
-      {/* 登录用户浏览埋点：记录进 D1 history 表 */}
-      <HistoryTracker promptId={prompt.id} />
       <div className="kicker" style={{ marginBottom: 22 }}>
         <Link href="/gallery" className="lbl mono" style={{ color: "var(--faint)" }}>
           ← 图集 · GALLERY
@@ -116,7 +113,13 @@ export default async function PromptDetailPage({
           <div className="mt-8">
             <div className="flex items-center justify-between">
               <span className="lbl mono">完整提示词</span>
-              <CopyButton text={promptOut} label="复制" />
+              <CopyWithHistory
+                text={promptOut}
+                source="gallery"
+                promptId={prompt.id}
+                promptSlug={promptSlug(prompt)}
+                label="复制"
+              />
             </div>
             <p
               className="mt-3 rounded"
@@ -183,8 +186,11 @@ export default async function PromptDetailPage({
           {/* 固定在右栏底部的操作区：与左侧图片底边对齐，正文在它上面独立滚动。
               按钮按内容宽度（不再拉长），与上方提示词框留出大间距。 */}
           <div className="flex shrink-0 flex-wrap items-center justify-center gap-3 pt-8">
-            <CopyButton
+            <CopyWithHistory
               text={promptOut}
+              source="gallery"
+              promptId={prompt.id}
+              promptSlug={promptSlug(prompt)}
               label="Copy Prompt · 复制提示词"
               copiedLabel="已复制 ✓"
               className="justify-center rounded-full border border-line-strong bg-ink-3 px-6 py-3 normal-case tracking-normal"

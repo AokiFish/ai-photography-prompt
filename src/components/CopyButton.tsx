@@ -8,6 +8,8 @@ interface CopyButtonProps {
   label?: string;
   copiedLabel?: string;
   className?: string;
+  /** 复制成功后回调（用于写历史等副作用） */
+  onAfterCopy?: () => void;
 }
 
 export function CopyButton({
@@ -15,6 +17,7 @@ export function CopyButton({
   label = "复制",
   copiedLabel = "已复制",
   className = "",
+  onAfterCopy,
 }: CopyButtonProps) {
   const [done, setDone] = useState(false);
 
@@ -35,6 +38,8 @@ export function CopyButton({
       setDone(true);
       showToast(copiedLabel);
       setTimeout(() => setDone(false), 1400);
+      // 复制成功后再触发副作用（不阻塞复制反馈）
+      if (onAfterCopy) onAfterCopy();
     } catch {
       showToast("复制失败，请手动选择");
     }

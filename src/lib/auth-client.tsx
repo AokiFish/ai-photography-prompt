@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { AuthUser } from "@/lib/auth";
+import { mergeLocalHistoryToCloud } from "./history-store";
 
 type Provider = "github" | "google";
 
@@ -25,6 +26,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [enabled, setEnabled] = useState<{ github: boolean; google: boolean }>({ github: false, google: false });
   const winRef = useRef<Window | null>(null);
   const onMsgRef = useRef<((e: MessageEvent) => void) | null>(null);
+  // 登录态建立（user 从 null 变为非 null）时，把本机历史合并进云端
+  const prevUserRef = useRef<AuthUser | null>(null);
+  useEffect(() => {
+    if (prevUserRef.current === null && user !== null) {
+      void mergeLocalHistoryToCloud();
+    }
+    prevUserRef.current = user;
+  }, [user]);
 
   const refresh = useCallback(async () => {
     try {
