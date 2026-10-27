@@ -29,7 +29,8 @@ function fmtTime(ts: number): string {
 
 // items 为 null → 本地模式（未登录，客户端读 localStorage，最多 20）
 // items 为数组 → 云端模式（已登录，服务端已读取最多 500 条）
-export function HistoryClient({ items }: { items: HistoryItem[] | null }) {
+// schemaError → 远程 history 表结构过旧（缺 prompt_text 列），需跑迁移
+export function HistoryClient({ items, schemaError = false }: { items: HistoryItem[] | null; schemaError?: boolean }) {
   const [local, setLocal] = useState<HistoryItem[] | null>(null);
 
   useEffect(() => {
@@ -59,6 +60,24 @@ export function HistoryClient({ items }: { items: HistoryItem[] | null }) {
             : "登录状态下保存，跨设备同步，超出 500 条自动移除最早的。"}
         </p>
       </Reveal>
+
+      {schemaError && (
+        <div
+          className="rounded"
+          style={{
+            background: "var(--accent-soft)",
+            border: "1px solid var(--accent)",
+            padding: "12px 14px",
+            fontSize: 13.5,
+            lineHeight: 1.7,
+            color: "var(--paper-2)",
+            marginBottom: 18,
+          }}
+        >
+          历史表结构需要更新：请在 Cloudflare D1 控制台对 <code style={{ fontFamily: "var(--font-mono),monospace" }}>ai-photography-prompt</code> 数据库执行{" "}
+          <code style={{ fontFamily: "var(--font-mono),monospace" }}>migrations/0004_history.sql</code>（含 DROP + CREATE），然后刷新本页。
+        </div>
+      )}
 
       <div className="mt-9">
         {list.length === 0 ? (
