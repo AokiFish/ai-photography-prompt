@@ -83,6 +83,20 @@ https://你的域名/api/auth/callback/google
 
 变量缺失时，对应登录按钮自动置灰，其余功能不受影响。
 
+## 模型配置（AI 精炼）
+
+「用 AI 精炼」把草稿交给大模型润色成更适合图像模型的提示词，走 OpenAI 兼容的 `/chat/completions` 协议。服务端默认模型由以下环境变量控制（控制台 `Settings → Environment variables` 或本地 `.dev.vars`）：
+
+| 变量 | 必填 | 说明 |
+| --- | --- | --- |
+| `REFINE_API_KEY` / `CUSTOM_API_KEY` | 是 | 大模型服务商的 API Key |
+| `REFINE_BASE_URL` / `CUSTOM_BASE_URL` | 否 | OpenAI 兼容接口地址，默认 `https://openrouter.ai/api/v1` |
+| `REFINE_MODEL` / `CUSTOM_MODEL` | 第三方必填 | 模型 ID（如 `agnes-3.0-flash`）；用 OpenRouter 时可省略，默认 `openai/gpt-4o-mini` |
+
+- 修改变量后必须**重新部署**才生效；`/api/refine/config` 可查看服务端是否已配置（不回显密钥本身）。
+- 用户也能在构建器里临时添加自己的模型（Base URL + 模型 ID + 可选密钥），添加前先发真实请求验证连通性。
+- **用户填写的密钥只存在其本人浏览器 `localStorage`，不进仓库、不上传服务器**；留空则复用服务端密钥。
+
 ## Cloudflare D1 初始化
 
 ```bash
