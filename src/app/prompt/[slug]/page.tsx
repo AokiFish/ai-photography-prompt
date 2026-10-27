@@ -7,6 +7,7 @@ import { PlateImage } from "@/components/PlateImage";
 import { CopyButton } from "@/components/CopyButton";
 import { SaveButton } from "@/components/SaveButton";
 import { GalleryClient } from "@/components/GalleryClient";
+import { HistoryTracker } from "@/components/HistoryTracker";
 
 export const dynamic = "force-dynamic";
 // D1 经 @cloudflare/next-on-pages 访问，必须在 edge runtime 内调用。
@@ -44,6 +45,8 @@ export default async function PromptDetailPage({
 
   return (
     <div className="pad-x" style={{ paddingTop: "clamp(34px,6vh,60px)", paddingBottom: "clamp(60px,9vh,110px)" }}>
+      {/* 登录用户浏览埋点：记录进 D1 history 表 */}
+      <HistoryTracker promptId={prompt.id} />
       <div className="kicker" style={{ marginBottom: 22 }}>
         <Link href="/gallery" className="lbl mono" style={{ color: "var(--faint)" }}>
           ← 图集 · GALLERY

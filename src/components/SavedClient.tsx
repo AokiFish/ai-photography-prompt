@@ -5,11 +5,11 @@ import type { Prompt } from "@/lib/types";
 import { GalleryClient } from "@/components/GalleryClient";
 import { getSaved, onSavedChange } from "@/lib/saved";
 
-// 收藏页的列表部分：收藏 id 存在 localStorage（无登录），
-// 因此必须由**服务端**把 D1 里的全量数据传进来，客户端只负责按 id 过滤。
+// 收藏页的列表部分：收藏 id 保存在 localStorage（无登录）与 D1（登录用户）两处，
+// 这里取并集后，由**服务端**传进来的全量 prompts 里按 id 过滤展示。
 // ⚠ 之前这里直接拿 SEED_PROMPTS（本地 18 条种子）比对，图集里收藏的真实条目
 //   根本不在那 18 条里，所以一个都显示不出来。
-export function SavedClient({ prompts }: { prompts: Prompt[] }) {
+export function SavedClient({ prompts, serverIds = [] }: { prompts: Prompt[]; serverIds?: string[] }) {
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -20,7 +20,9 @@ export function SavedClient({ prompts }: { prompts: Prompt[] }) {
     return () => off();
   }, []);
 
-  const saved = prompts.filter((p) => savedIds.includes(p.id));
+  // 本地 + 云端（登录用户）取并集
+  const union = Array.from(new Set([...savedIds, ...serverIds]));
+  const saved = prompts.filter((p) => union.includes(p.id));
 
   if (!loaded) {
     return (

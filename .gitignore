@@ -11,3 +11,7 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 .workbuddy/
 .DS_Store
+
+# 本地密钥（绝不上传）
+.env.local
+.env*.local

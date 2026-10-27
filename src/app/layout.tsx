@@ -4,6 +4,7 @@ import { Grain } from "@/components/Grain";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Toast } from "@/components/Toast";
+import { AuthProvider } from "@/lib/auth-client";
 
 export const metadata: Metadata = {
   title: {
@@ -38,11 +39,13 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700&display=swap"
           rel="stylesheet"
         />
-        <Grain />
-        <Nav />
-        <main style={{ paddingTop: 64 }}>{children}</main>
-        <Footer />
-        <Toast />
+        <AuthProvider>
+          <Grain />
+          <Nav />
+          <main style={{ paddingTop: 64 }}>{children}</main>
+          <Footer />
+          <Toast />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { UserMenu } from "@/components/UserMenu";
 
 const LINKS = [
   { href: "/", label: "首页", en: "Index" },
   { href: "/gallery", label: "图集", en: "Gallery" },
   { href: "/builder", label: "构建器", en: "Builder" },
   { href: "/saved", label: "收藏", en: "Saved" },
+  { href: "/history", label: "历史", en: "History" },
   { href: "/about", label: "关于", en: "About" },
   { href: "/faq", label: "问答", en: "FAQ" },
 ];
@@ -67,6 +69,9 @@ export function Nav() {
               </Link>
             </li>
           ))}
+          <li>
+            <UserMenu />
+          </li>
         </ul>
 
         <button
@@ -100,6 +105,9 @@ export function Nav() {
               </Link>
             </li>
           ))}
+          <li className="pt-2">
+            <UserMenu />
+          </li>
         </ul>
       </div>
     </header>
