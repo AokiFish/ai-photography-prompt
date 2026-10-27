@@ -7,7 +7,7 @@ export const metadata = {
 
 const PILLARS = [
   { n: "01", t: "翻译，不是咒语", d: "提示词的本质是把脑中的画面翻译成模型听得懂的名词与动词。我们聚焦「可复用的摄影语言」，而非堆砌形容词。" },
-  { n: "02", t: "分类，不混装", d: "数据按来源（PRMPT / Lexica）与摄影语言（电影感、极简、胶片…）双维度归类，便于检索与策展，绝不全塞一桶。" },
+  { n: "02", t: "图集与构建器", d: "摄影语言（电影感、极简、胶片…），AI提示词精炼，便于研究和试验，亲身实践是最好的体验。" },
   { n: "03", t: "每日更新", d: "GitHub Action 每天 08:00 以安全间隔采集两个源，写入 Cloudflare D1；站点读取即时反映最新收藏。" },
   { n: "04", t: "轻量收藏", d: "收藏存于本机浏览器，无需登录、无追踪。把复杂留给我们，把简单留给你。" },
 ];
@@ -50,17 +50,6 @@ export default function AboutPage() {
             </div>
           ))}
         </div>
-      </Reveal>
-
-      <Reveal>
-        <h2 className="display" style={{ fontSize: "clamp(26px,4vw,44px)", marginTop: "clamp(50px,8vh,84px)", marginBottom: 18 }}>
-          数据从哪来
-        </h2>
-        <p style={{ maxWidth: "44em", color: "var(--muted)", fontSize: 15, lineHeight: 1.85 }}>
-          采集器每天以「正常的安全间隔」轮询两个来源：<b style={{ color: "var(--paper-2)", fontWeight: 600 }}>PRMPT</b>（编辑 / 时尚 / 肖像类精品画廊）与
-          <b style={{ color: "var(--paper-2)", fontWeight: 600 }}> Lexica</b>（社区图像与提示词搜索引擎）。每条记录都标注来源与摄影语言，
-          写入 D1 时按这两个维度建立索引——分类清晰，互不混淆。
-        </p>
       </Reveal>
 
       <Reveal>
